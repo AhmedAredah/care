@@ -55,7 +55,7 @@ dependencies = [
 # Kept out of the base install so the runtime stays slim on
 # deployments that only use the offline-safe regex/Presidio chain.
 ml = [
-    "transformers>=4.40",
+    "transformers>=5.7.0",
     "torch>=2.4",
 ]
 # Cloud LLM SDKs — opt-in only. Each is required only when the

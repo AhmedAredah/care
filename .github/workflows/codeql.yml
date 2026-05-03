@@ -1,0 +1,95 @@
+name: CodeQL
+
+# CodeQL advanced setup for CARE.
+#
+# Why advanced (not default) setup:
+#   * We register custom path-injection sanitizers via Models-as-Data
+#     (.github/codeql/extensions) so CodeQL recognises safe_join and
+#     normalize_input_path as taint barriers. Default setup cannot
+#     load model packs.
+#   * We pin the query suite, exclude generated/test paths, and keep
+#     the workflow under source control so reviewers can see exactly
+#     what is scanned and how.
+#
+# This workflow takes precedence over the repository's default-setup
+# CodeQL configuration when present. The default setup must also be
+# disabled in repo Settings -> Code security -> Code scanning, or
+# GitHub will refuse to start the analysis here.
+#
+# Languages scanned:
+#   - python     (backend, scripts, tests)
+#   - javascript (frontend/js, frontend assets)
+#
+# Languages deliberately not scanned:
+#   - YAML/HTML/CSS — CodeQL has no first-party analyzers.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Weekly Monday 06:00 UTC — picks up new queries from upstream
+    # query packs without waiting for a code change.
+    - cron: "0 6 * * 1"
+
+# Top-level least privilege. The analyze job re-declares the writes
+# it actually needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      # Required for github/codeql-action to upload SARIF results.
+      security-events: write
+      # Required to read repository contents during analysis.
+      contents: read
+      # Required for private repositories so the action can access the
+      # GitHub Actions API; harmless on public repos.
+      actions: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Python is set up explicitly so CodeQL's extractor sees the
+      # same interpreter version we ship with (3.11). Without this,
+      # CodeQL falls back to whatever Python the runner image has,
+      # which can drift between ubuntu-latest images.
+      - name: Set up Python
+        if: matrix.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

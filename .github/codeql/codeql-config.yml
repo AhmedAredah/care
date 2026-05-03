@@ -1,0 +1,60 @@
+# CodeQL advanced configuration for CARE.
+#
+# Loaded by .github/workflows/codeql.yml.
+#
+# Decisions encoded here:
+#   1. Use the security-extended query suite. Default catches a
+#      narrow band; security-extended adds higher-recall taint
+#      queries (path injection, command injection, SSRF, prototype
+#      pollution) which are exactly the classes we care about for an
+#      offline document-processing tool.
+#   2. Load Models-as-Data extensions from
+#      .github/codeql/extensions/. We use this to teach CodeQL about
+#      our internal sanitizers (safe_join, normalize_input_path) so
+#      the existing path-injection alerts close at their root cause
+#      instead of being suppressed alert-by-alert.
+#   3. Exclude tests, build artefacts, and frontend vendor paths.
+#      Tests intentionally exercise unsafe paths and CodeQL findings
+#      there are noise; build/ is generated PyInstaller scaffolding.
+name: "CARE CodeQL config"
+
+# security-extended is one tier above the default suite. It includes
+# all default queries plus higher-recall security queries. We do NOT
+# enable security-and-quality because the quality queries are noisy
+# for this size of repo and would crowd out real security findings.
+queries:
+  - uses: security-extended
+
+# Path-based filters. CodeQL scans these by default; we narrow scope
+# so the dashboard reflects production code only.
+paths:
+  - care
+  - frontend
+  - scripts
+  - build/runner.py
+  - build/care.spec
+
+paths-ignore:
+  # Test code intentionally constructs unsafe inputs to verify
+  # rejection. CodeQL's path/command-injection queries flag the
+  # inputs themselves, which is not actionable.
+  - tests
+  # Generated installer scaffolding — not application code.
+  - build/dist
+  - build/work
+  # Local virtualenvs and tooling caches that may end up checked
+  # out on self-hosted runners.
+  - "**/.venv"
+  - "**/__pycache__"
+  - "**/node_modules"
+
+# Models-as-Data extension packs. Each entry is a path (relative to
+# the repo root) to a directory containing .model.yml files. These
+# files register internal functions as sanitizers / sources / sinks
+# so CodeQL's taint tracking reflects how our code actually works.
+#
+# See .github/codeql/extensions/README is in the parent directory's
+# README.md for the rationale and how to add more.
+packs:
+  python:
+    - ./.github/codeql/extensions

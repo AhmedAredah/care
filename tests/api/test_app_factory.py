@@ -63,3 +63,57 @@ def test_app_title_and_version_are_local() -> None:
     app = create_app()
     assert app.title == "care"
     assert isinstance(app.version, str) and app.version
+
+
+def test_static_frontend_responses_disable_caching(tmp_path) -> None:
+    """The desktop GUI runs inside pywebview with a persistent storage
+    path. Without explicit no-cache headers the embedded webview
+    serves stale HTML / JS after every CARE update — operators see
+    the previous version of the GUI until they manually hard-refresh.
+
+    The fix lives in ``care.main._NoCacheStaticFiles`` which adds
+    ``Cache-Control: no-store, no-cache, must-revalidate, max-age=0``
+    plus the legacy ``Pragma`` and ``Expires`` companions to every
+    static-file response.
+
+    This test drives the static handler directly (no httpx /
+    TestClient dependency required, in keeping with the rest of this
+    file). We point the app at a tmp frontend dir so the test does
+    not depend on the real one and is hermetic against future changes
+    to ``frontend/index.html``.
+    """
+    import asyncio
+
+    fdir = tmp_path / "frontend"
+    fdir.mkdir()
+    (fdir / "index.html").write_text("<html></html>", encoding="utf-8")
+    (fdir / "app.js").write_text("/* test asset */", encoding="utf-8")
+
+    app = create_app(frontend_dir=fdir)
+    static_route = next(
+        r for r in app.routes if getattr(r, "name", None) == "frontend"
+    )
+    static_app = static_route.app  # the _NoCacheStaticFiles instance
+
+    async def fetch(path: str):
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": path,
+            "headers": [],
+        }
+        return await static_app.get_response(path, scope)
+
+    for path in ("index.html", "app.js"):
+        response = asyncio.run(fetch(path))
+        assert response.status_code == 200, (
+            f"{path}: expected 200, got {response.status_code}"
+        )
+        cc = response.headers.get("Cache-Control", "")
+        assert "no-store" in cc and "no-cache" in cc and "must-revalidate" in cc, (
+            f"{path}: Cache-Control missing no-store/no-cache/must-revalidate "
+            f"(got {cc!r}) — pywebview will serve a stale copy on the next "
+            f"app launch."
+        )
+        assert response.headers.get("Pragma") == "no-cache"
+        assert response.headers.get("Expires") == "0"

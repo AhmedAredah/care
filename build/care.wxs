@@ -64,8 +64,9 @@
 
     <Icon Id="AppIcon" SourceFile="..\assets\icon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/openCrashExtract/care" />
-    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/AhmedAredah/care" />
+    <!-- ARPNOMODIFY is already declared by the WixUI_Minimal extension
+         we reference below; defining it here too produces WIX0091. -->
     <Property Id="ARPNOREPAIR" Value="1" />
 
     <!-- WebView2 prerequisite check. The Evergreen runtime registers

@@ -27,6 +27,15 @@ class OCRProvider(ABC):
     supports_line_bboxes: bool = False
     supports_confidence: bool = False
 
+    # Optional benchmark numbers surfaced in the GUI plugin picker.
+    # Schema: {"tier": "A"|"B"|"C", "benchmark": str, "benchmark_version": str,
+    #          "metric_name": "cer"|"wer"|"f1"|"accuracy", "headline": float,
+    #          "per_entity": dict[str, float] | None, "notes": str | None}.
+    # Tier A = project-run benchmark on a held-out crash-report corpus;
+    # B = published numbers in-domain; C = vendor / unverified. The UI
+    # only ranks providers within the same tier.
+    accuracy_metrics: Optional[dict[str, Any]] = None
+
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None:
         """Initialize the provider from local-only config. Must not download anything."""

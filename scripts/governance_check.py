@@ -150,6 +150,52 @@ def check_desktop_module_no_external_urls() -> None:
             )
 
 
+def check_plugin_manifests_disable_unsafe_defaults() -> None:
+    """Forward guard for per-plugin installer manifests (Phase 2+).
+
+    Per-plugin installers ship a ``plugin.toml`` at the bundle root.
+    The contract requires that no installer enable Piiranha,
+    Kosmos-2.5, or any document_ai provider by default — operators
+    must opt in explicitly after a license review. This check is a
+    no-op until plugin.toml files appear in the tree.
+    """
+    try:
+        import tomllib
+    except ImportError as exc:  # pragma: no cover — Python <3.11
+        fail(f"governance_check could not import tomllib: {exc}")
+        return
+
+    unsafe_providers = {"piiranha", "kosmos25"}
+    for manifest in ROOT.rglob("plugin.toml"):
+        # Skip vendored/test fixtures so they don't poison the gate.
+        if any(part in {".venv", ".venv-test", "node_modules"} for part in manifest.parts):
+            continue
+        try:
+            data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            fail(f"{manifest.relative_to(ROOT)} is not valid TOML: {exc}")
+            continue
+
+        plugin_section = data.get("plugin", {})
+        providers = plugin_section.get("providers") or []
+        if not isinstance(providers, list):
+            providers = []
+
+        defaults = data.get("defaults", {}) or {}
+        for provider_name in providers:
+            if provider_name in unsafe_providers and defaults.get(provider_name, {}).get("enabled") is True:
+                fail(
+                    f"{manifest.relative_to(ROOT)}: provider {provider_name!r} "
+                    "must not be enabled by default in a plugin manifest "
+                    "(license-review-required)."
+                )
+            if defaults.get(provider_name, {}).get("category") == "document_ai" and defaults[provider_name].get("enabled") is True:
+                fail(
+                    f"{manifest.relative_to(ROOT)}: document_ai provider "
+                    f"{provider_name!r} must not be enabled by default."
+                )
+
+
 def check_locked_keys() -> None:
     """Re-use the runtime guard table to enforce that no config.yaml
     on disk has flipped a locked key.
@@ -196,6 +242,7 @@ def main() -> int:
     check_locked_keys()
     check_no_public_export_of_originals()
     check_desktop_module_no_external_urls()
+    check_plugin_manifests_disable_unsafe_defaults()
 
     if FAILURES:
         print("\nPolicy check FAILED\n")

@@ -70,3 +70,69 @@ def test_required_files_exist() -> None:
     ]
     for rel in required:
         assert (ROOT / rel).exists(), f"missing required file: {rel}"
+
+
+def _import_governance_check_module():
+    """Import scripts/governance_check.py without running its main()."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_gc_under_test", ROOT / "scripts" / "governance_check.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_plugin_manifest_check_rejects_default_enabled_piiranha(tmp_path, monkeypatch) -> None:
+    """A future per-plugin installer manifest that defaults Piiranha to
+    enabled=true must trip governance_check, even though no manifests
+    exist in the tree today."""
+    gc = _import_governance_check_module()
+    fake_root = tmp_path
+    (fake_root / "plugins").mkdir()
+    manifest = fake_root / "plugins" / "pii-ml" / "plugin.toml"
+    manifest.parent.mkdir()
+    manifest.write_text(
+        '[plugin]\n'
+        'id = "pii-ml"\n'
+        'providers = ["piiranha", "roberta_ner"]\n'
+        '\n'
+        '[defaults.piiranha]\n'
+        'enabled = true\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(gc, "ROOT", fake_root)
+    monkeypatch.setattr(gc, "FAILURES", [])
+    gc.check_plugin_manifests_disable_unsafe_defaults()
+    assert any("piiranha" in f and "enabled by default" in f for f in gc.FAILURES), gc.FAILURES
+
+
+def test_plugin_manifest_check_passes_when_safely_disabled(tmp_path, monkeypatch) -> None:
+    gc = _import_governance_check_module()
+    fake_root = tmp_path
+    manifest = fake_root / "plugins" / "pii-ml" / "plugin.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        '[plugin]\n'
+        'id = "pii-ml"\n'
+        'providers = ["piiranha", "roberta_ner"]\n'
+        '\n'
+        '[defaults.piiranha]\n'
+        'enabled = false\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gc, "ROOT", fake_root)
+    monkeypatch.setattr(gc, "FAILURES", [])
+    gc.check_plugin_manifests_disable_unsafe_defaults()
+    assert gc.FAILURES == []
+
+
+def test_plugin_manifest_check_is_noop_when_no_manifests(tmp_path, monkeypatch) -> None:
+    """No plugin.toml in the tree -> the check must do nothing."""
+    gc = _import_governance_check_module()
+    monkeypatch.setattr(gc, "ROOT", tmp_path)
+    monkeypatch.setattr(gc, "FAILURES", [])
+    gc.check_plugin_manifests_disable_unsafe_defaults()
+    assert gc.FAILURES == []

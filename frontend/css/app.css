@@ -570,6 +570,23 @@ button.danger {
 .badge-warn { background: var(--warn-soft); color: var(--warn); }
 .badge-bad { background: var(--bad-soft); color: var(--bad); }
 
+/* Accuracy tier badges — A = project benchmark (best evidence),
+   B = published in-domain, C = vendor / unverified. The UI rule is
+   that ranking only happens within the same tier. */
+.badge-tier-a { background: var(--ok-soft); color: var(--ok); }
+.badge-tier-b { background: var(--warn-soft); color: var(--warn); }
+.badge-tier-c { background: var(--bad-soft); color: var(--bad); }
+
+.plugin-accuracy-cell {
+  white-space: nowrap;
+}
+
+.plugin-accuracy-headline {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  margin-right: 0.4rem;
+}
+
 /* =====================================================================
    PROCESS PAGE — active jobs + recent runs
    ===================================================================== */

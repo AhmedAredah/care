@@ -17,6 +17,10 @@ wired up:
   themselves are NEVER returned.
 - ``license_review_required`` — class flag (e.g. Piiranha's
   CC-BY-NC review obligation). UI uses this to render a warning chip.
+- ``accuracy`` — optional class attribute with benchmark numbers and
+  a tier badge (A=project benchmark, B=published in-domain, C=vendor
+  / unverified). The UI ranks providers within the same tier only.
+  ``null`` when the provider hasn't declared metrics.
 """
 from __future__ import annotations
 
@@ -73,6 +77,35 @@ def _check_model_files_present(provider_cfg: dict[str, Any]) -> Optional[bool]:
     return True
 
 
+# Accuracy tiers surfaced in the UI. Anything else is rejected (the
+# provider class is mis-declaring its evidence quality).
+_ACCURACY_TIERS: frozenset[str] = frozenset({"A", "B", "C"})
+
+
+def _accuracy_payload(cls: Any) -> Optional[dict[str, Any]]:
+    """Return a sanitised copy of the provider's accuracy_metrics, or None.
+
+    Drops the field entirely if the declared tier is unknown — better
+    to hide a malformed claim than to render a tier badge the UI rule
+    can't enforce.
+    """
+    raw = getattr(cls, "accuracy_metrics", None)
+    if not isinstance(raw, dict):
+        return None
+    tier = raw.get("tier")
+    if tier not in _ACCURACY_TIERS:
+        return None
+    return {
+        "tier": tier,
+        "benchmark": str(raw.get("benchmark", "")),
+        "benchmark_version": str(raw.get("benchmark_version", "")),
+        "metric_name": str(raw.get("metric_name", "")),
+        "headline": raw.get("headline"),
+        "per_entity": raw.get("per_entity") if isinstance(raw.get("per_entity"), dict) else None,
+        "notes": raw.get("notes") if isinstance(raw.get("notes"), str) else None,
+    }
+
+
 def _provider_summary(
     name: str,
     cls: Any,
@@ -92,6 +125,7 @@ def _provider_summary(
         "license_review_required": bool(
             getattr(cls, "license_review_required", False)
         ),
+        "accuracy": _accuracy_payload(cls),
         "enabled": bool(provider_cfg.get("enabled", False)),
         "in_active_chain": name in chain,
         "model_files_present": _check_model_files_present(provider_cfg),

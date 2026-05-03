@@ -36,7 +36,7 @@ Transportation researchers, DOTs, and university traffic safety programs need ac
 CARE is built so that **the safe path is the default path**:
 
 - **Offline-first** — no telemetry, no analytics, no auto-update, no CDN, no cloud calls in the default config. Hugging Face/Transformers loads only from local model files. The runtime can be air-gapped end-to-end.
-- **Plugin-based** — every OCR engine, PII detector, and document-AI model is a plugin behind a stable interface. Operators choose what to enable; nothing is hard-coded.
+- **Plugin-based** — every OCR engine, PII detector, and document-AI model is a plugin behind a stable interface. Operators choose what to enable; nothing is hard-coded. The Plugins page shows per-provider accuracy with a tier badge (A = project benchmark, B = published in-domain, C = vendor / unverified) so claims can't outrank evidence.
 - **Fail-closed** — uncertainty blocks export. Better to surface a job for review than ship a leaky redaction.
 - **Auditable** — model checksums, SBOM, immutable policy guard, every plugin enable/disable logged.
 - **Native desktop app** — pywebview-wrapped FastAPI. No browser tab, no localhost copy-paste; just a Start Menu shortcut.
@@ -51,14 +51,16 @@ Download the installer for your environment from the [Releases page](https://git
 |---|---|
 | `CARE-*-core-online-Setup.exe` | **Default.** Slim install (~120 MB), connected workstation. |
 | `CARE-*-core-airgap-Setup.exe` | Slim install, air-gapped or restricted-network host. |
-| `CARE-*-ml-online-Setup.exe`   | Adds Hugging Face models (Piiranha, RoBERTa-NER, Kosmos-2.5, LayoutLM). |
-| `CARE-*-ml-airgap-Setup.exe`   | ML models, air-gapped. |
+| `CARE-*-ml-online-Setup.exe`   | Bundles `torch` + `transformers` so HF plugins (Piiranha, RoBERTa-NER, Kosmos-2.5, LayoutLM) can run. **Model weights are not included** — drop them into `%LOCALAPPDATA%\CARE\models\` per [`docs/license-and-model-governance.md`](docs/license-and-model-governance.md). |
+| `CARE-*-ml-airgap-Setup.exe`   | Same ML libraries, bundled WebView2 runtime for offline hosts. |
 | `CARE-*-core.msi`              | Enterprise SCCM/Intune deployment, slim. |
-| `CARE-*-ml.msi`                | Enterprise SCCM/Intune deployment, ML. |
+| `CARE-*-ml.msi`                | Enterprise SCCM/Intune deployment, ML libraries. |
 
 Code signing for Windows binaries is provided free of charge by the [SignPath Foundation](https://signpath.io/foundation), the OSS code-signing program. Enrolment is in progress; the v0.1.0-alpha binaries are unsigned in the meantime. See the [release notes](https://github.com/AhmedAredah/care/releases) for SmartScreen / Mark-of-the-Web handling and SHA-256 verification before installing.
 
 See [`docs/deployment-windows.md`](docs/deployment-windows.md) for the full deployment guide.
+
+> **Coming in v0.2** — the `ml` SKU is being split into per-plugin bundles (one core installer + opt-in `pii-ml`, `vlm`, `ocr-traditional`, `presidio`, `llm-local`, `llm-cloud`). Each bundle ships its own model weights inline and is signed independently, so operators only download what they're licensed to deploy. License-review-required bundles (`pii-ml`, `vlm`) gate at install time. Tracking issue and migration notes will land before the cutover.
 
 ### Install (from source, any OS)
 

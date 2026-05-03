@@ -117,6 +117,11 @@ class LLMProvider(ABC):
     safe_for_export_decision: bool = False
     safe_for_image_redaction: bool = False
 
+    # See ``care.ocr.base.OCRProvider.accuracy_metrics`` for the schema.
+    # Cloud LLMs are typically Tier C; local LLMs may be Tier B if the
+    # underlying model has a published in-domain eval.
+    accuracy_metrics: Optional[dict[str, Any]] = None
+
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None:
         """Validate config + prepare the provider for inference.

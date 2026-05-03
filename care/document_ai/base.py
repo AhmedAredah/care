@@ -7,7 +7,7 @@ silently drives image redaction or final narrative export.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 from ..ocr.base import ProviderHealth
 from .result import (
@@ -35,6 +35,11 @@ class DocumentAIProvider(ABC):
 
     generative_model: bool = True
     hallucination_risk: bool = True
+
+    # See OCRProvider.accuracy_metrics for the schema. VLM benchmarks
+    # are typically Tier C (vendor / unverified) until a fair in-domain
+    # eval set exists; the UI must show the tier badge.
+    accuracy_metrics: Optional[dict[str, Any]] = None
 
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None: ...

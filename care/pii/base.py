@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 from ..ocr.base import ProviderHealth
 from .entities import PIIEntity
@@ -19,6 +19,10 @@ class PIIDetectionProvider(ABC):
     supports_offsets: bool = False
     supports_bboxes: bool = False
     supports_confidence: bool = False
+
+    # See OCRProvider.accuracy_metrics for the schema. PII providers
+    # typically populate ``per_entity`` with F1 per supported PII type.
+    accuracy_metrics: Optional[dict[str, Any]] = None
 
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None: ...

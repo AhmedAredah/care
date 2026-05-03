@@ -84,6 +84,69 @@ def test_list_plugins_marks_piiranha_as_license_review_required() -> None:
     assert by_name["regex"]["license_review_required"] is False
 
 
+def test_list_plugins_accuracy_field_always_present() -> None:
+    """Every provider summary exposes an ``accuracy`` key — either a
+    sanitised payload or ``None``. The regex PII provider ships a
+    Tier-A payload from ``scripts/bench/run_pii_bench.py``; everything
+    else is None until benchmarked."""
+    payload = list_plugins(config=AppConfig())
+    for category in ("ocr", "pii", "document_ai"):
+        for p in payload[category]["providers"]:
+            assert "accuracy" in p, f"{category}.{p['name']} missing accuracy"
+    by_name = {p["name"]: p for p in payload["pii"]["providers"]}
+    regex_accuracy = by_name["regex"]["accuracy"]
+    assert regex_accuracy is not None
+    assert regex_accuracy["tier"] == "A"
+    assert regex_accuracy["metric_name"] == "f1"
+    assert isinstance(regex_accuracy["headline"], (int, float))
+    # Other PII providers have no benchmark yet.
+    assert by_name["piiranha"]["accuracy"] is None
+    assert by_name["roberta_ner"]["accuracy"] is None
+
+
+def test_list_plugins_accuracy_payload_sanitised(monkeypatch) -> None:
+    """A provider declaring accuracy_metrics with a known tier surfaces
+    a normalised payload; unknown tiers are dropped (returns None)."""
+    from care.pii.providers.regex_provider import RegexPIIProvider
+
+    monkeypatch.setattr(
+        RegexPIIProvider,
+        "accuracy_metrics",
+        {
+            "tier": "A",
+            "benchmark": "care-pii-bench-v1",
+            "benchmark_version": "2026-05-01",
+            "metric_name": "f1",
+            "headline": 0.83,
+            "per_entity": {"PHONE": 0.99, "VIN": 0.97},
+            "notes": "Synthetic corpus; deterministic regex baseline.",
+        },
+        raising=False,
+    )
+    payload = list_plugins(config=AppConfig())
+    regex = next(p for p in payload["pii"]["providers"] if p["name"] == "regex")
+    assert regex["accuracy"] == {
+        "tier": "A",
+        "benchmark": "care-pii-bench-v1",
+        "benchmark_version": "2026-05-01",
+        "metric_name": "f1",
+        "headline": 0.83,
+        "per_entity": {"PHONE": 0.99, "VIN": 0.97},
+        "notes": "Synthetic corpus; deterministic regex baseline.",
+    }
+
+    # Unknown tier -> entire payload dropped.
+    monkeypatch.setattr(
+        RegexPIIProvider,
+        "accuracy_metrics",
+        {"tier": "Z", "benchmark": "x", "headline": 0.9},
+        raising=False,
+    )
+    payload = list_plugins(config=AppConfig())
+    regex = next(p for p in payload["pii"]["providers"] if p["name"] == "regex")
+    assert regex["accuracy"] is None
+
+
 def test_list_plugins_in_active_chain_reflects_chain_membership() -> None:
     payload = list_plugins(config=AppConfig())
     by_name = {p["name"]: p for p in payload["pii"]["providers"]}

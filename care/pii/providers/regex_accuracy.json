@@ -1,0 +1,16 @@
+{
+  "tier": "A",
+  "benchmark": "care-pii-bench-v1",
+  "benchmark_version": "2026-05-03",
+  "metric_name": "f1",
+  "headline": 0.912,
+  "per_entity": {
+    "EMAIL": 1.0,
+    "PERSON_NAME": 0.686,
+    "LICENSE_PLATE": 1.0,
+    "ADDRESS": 0.806,
+    "PHONE_NUMBER": 1.0,
+    "VIN": 1.0
+  },
+  "notes": "Synthetic corpus (pii_corpus.jsonl); span-level overlap match with min 50% smaller-side coverage. Provider: regex."
+}

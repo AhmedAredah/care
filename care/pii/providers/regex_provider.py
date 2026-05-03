@@ -6,12 +6,30 @@ false negatives are dangerous.
 """
 from __future__ import annotations
 
-from typing import Any
+import json
+from pathlib import Path
+from typing import Any, Optional
 
 from ...ocr.base import ProviderHealth
 from ..base import PIIDetectionProvider
 from ..entities import PIIEntity
 from ..recognizers import ALL_RECOGNIZERS
+
+
+def _load_accuracy() -> Optional[dict[str, Any]]:
+    """Read the Tier-A benchmark result committed alongside this module.
+
+    Re-run ``scripts/bench/run_pii_bench.py`` against the synthetic
+    corpus to refresh the file. Fail-soft to ``None`` so a missing
+    file (e.g., a partial source checkout) doesn't break import.
+    """
+    path = Path(__file__).with_name("regex_accuracy.json")
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 class RegexPIIProvider(PIIDetectionProvider):
@@ -25,6 +43,8 @@ class RegexPIIProvider(PIIDetectionProvider):
     supports_offsets = True
     supports_bboxes = False
     supports_confidence = True
+
+    accuracy_metrics = _load_accuracy()
 
     def __init__(self) -> None:
         self._loaded = False

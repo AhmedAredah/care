@@ -61,6 +61,62 @@
     return u.el("td", null, [u.el("span", { class: "muted small", text: "—" })]);
   }
 
+  /* Accuracy cell — headline number + tier badge. The tier badge is
+     load-bearing: ranking is only meaningful within the same tier, so
+     the UI must always show it next to the number. Per-entity
+     breakdown surfaces as a tooltip. */
+  function formatHeadline(metric, value) {
+    if (value === null || value === undefined) return "—";
+    if (typeof value !== "number" || isNaN(value)) return String(value);
+    /* CER / WER are error rates: lower is better, render as percent.
+       F1 / accuracy: 0–1 scale, render to 2 dp. */
+    if (metric === "cer" || metric === "wer") {
+      return (value * 100).toFixed(1) + "% " + metric.toUpperCase();
+    }
+    return value.toFixed(2);
+  }
+
+  function accuracyTooltip(a) {
+    var lines = [];
+    if (a.benchmark) {
+      lines.push("Benchmark: " + a.benchmark +
+        (a.benchmark_version ? " (" + a.benchmark_version + ")" : ""));
+    }
+    if (a.metric_name) lines.push("Metric: " + a.metric_name);
+    if (a.per_entity && typeof a.per_entity === "object") {
+      var keys = Object.keys(a.per_entity);
+      if (keys.length) {
+        lines.push("Per entity:");
+        keys.forEach(function (k) {
+          lines.push("  " + k + ": " + a.per_entity[k]);
+        });
+      }
+    }
+    if (a.notes) lines.push("Notes: " + a.notes);
+    return lines.join("\n");
+  }
+
+  function accuracyCell(a) {
+    var u = global.OCEUtils;
+    var td = u.el("td", { class: "plugin-accuracy-cell" });
+    if (!a || !a.tier) {
+      td.appendChild(u.el("span", { class: "muted small", text: "—" }));
+      return td;
+    }
+    td.appendChild(u.el("span", {
+      class: "plugin-accuracy-headline",
+      text: formatHeadline(a.metric_name, a.headline),
+    }));
+    var tierClass = "badge-tier-" + String(a.tier).toLowerCase();
+    td.appendChild(u.el("span", {
+      class: "badge " + tierClass,
+      text: "Tier " + a.tier,
+    }));
+    var tip = accuracyTooltip(a);
+    if (tip) td.title = tip;
+    return td;
+  }
+
   /* ---------- per-section copy ------------------------------------------ */
 
   /* Differentiated role label per section. OCR's chain order is a hard
@@ -346,6 +402,7 @@
         u.el("th", { text: "Provider" }),
         u.el("th", { text: "Type" }),
         u.el("th", { text: "Default" }),
+        u.el("th", { text: "Accuracy", title: "Hover the cell for benchmark, metric, and per-entity breakdown. Tier A = project-run benchmark, B = published in-domain, C = vendor / unverified. Rankings are only meaningful within the same tier." }),
         u.el("th", { text: "Enabled" }),
         u.el("th", { text: "Position / order" }),
         u.el("th", { text: "Model files" }),
@@ -369,6 +426,7 @@
         nameCell,
         u.el("td", { text: p.provider_type }),
         u.el("td", { text: p.enabled_by_default ? "yes" : "no" }),
+        accuracyCell(p.accuracy),
         statusCell(!!p.enabled),
         chainOrderCell(p, sectionKey, chain, refresh),
         statusCell(p.model_files_present),
@@ -441,7 +499,17 @@
       u.el("span", {
         text:
           " mark OCR chain priority; for PII and document_ai the " +
-          "position number (#1, #2, …) is positional only.",
+          "position number (#1, #2, …) is positional only. ",
+      }),
+      u.el("span", { class: "badge badge-tier-a", text: "Tier A" }),
+      u.el("span", { text: " project benchmark, " }),
+      u.el("span", { class: "badge badge-tier-b", text: "Tier B" }),
+      u.el("span", { text: " published in-domain, " }),
+      u.el("span", { class: "badge badge-tier-c", text: "Tier C" }),
+      u.el("span", {
+        text:
+          " vendor / unverified — rankings only meaningful within the " +
+          "same tier. Hover the Accuracy cell for per-entity numbers.",
       }),
     ]);
     host.appendChild(legend);

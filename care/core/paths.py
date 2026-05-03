@@ -11,6 +11,15 @@ from .config import AppConfig
 _WINDOWS_DRIVE_RE = re.compile(r"^([A-Za-z]):[\\/](.*)", re.DOTALL)
 
 
+def _host_is_windows() -> bool:
+    """Indirection over ``os.name`` so tests can spoof platform without
+    touching the global ``os.name`` (which pathlib reads at multiple
+    points and which breaks pytest's cache writer on Windows when
+    flipped mid-session).
+    """
+    return os.name == "nt"
+
+
 def is_absolute_cross_platform(path_str: str) -> bool:
     """Return True if ``path_str`` is absolute under any common convention.
 
@@ -94,7 +103,7 @@ def normalize_input_path(path_str: str) -> Path:
         path_str = _strip_surrounding_quotes(path_str.strip())
     if not is_absolute_cross_platform(path_str):
         raise ValueError("path must be absolute")
-    if os.name != "nt" and _looks_like_windows_path(path_str):
+    if not _host_is_windows() and _looks_like_windows_path(path_str):
         translated = _translate_windows_to_wsl(path_str)
         if translated is not None:
             return Path(translated)

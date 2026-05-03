@@ -77,7 +77,7 @@ def test_normalize_input_path_translates_windows_to_wsl_when_file_exists(
     applied automatically."""
     import care.core.paths as paths_mod
 
-    monkeypatch.setattr(paths_mod.os, "name", "posix")
+    monkeypatch.setattr(paths_mod, "_host_is_windows", lambda: False)
 
     # Stand up a fake file at /tmp/.../mnt/c/Users/X/file.pdf and
     # monkeypatch the translator to point at it.
@@ -105,7 +105,7 @@ def test_normalize_input_path_returns_original_when_no_wsl_match(
     can produce a clear 'source file not found' error."""
     import care.core.paths as paths_mod
 
-    monkeypatch.setattr(paths_mod.os, "name", "posix")
+    monkeypatch.setattr(paths_mod, "_host_is_windows", lambda: False)
     monkeypatch.setattr(
         paths_mod, "_translate_windows_to_wsl", lambda _p: None
     )
@@ -118,7 +118,7 @@ def test_normalize_input_path_returns_original_when_no_wsl_match(
 def test_normalize_input_path_unc_does_not_translate(monkeypatch) -> None:
     import care.core.paths as paths_mod
 
-    monkeypatch.setattr(paths_mod.os, "name", "posix")
+    monkeypatch.setattr(paths_mod, "_host_is_windows", lambda: False)
     out = normalize_input_path("\\\\server\\share\\file.pdf")
     assert isinstance(out, Path)
 
@@ -178,7 +178,7 @@ def test_normalize_input_path_strip_then_translate(
 
     fake = tmp_path / "actual.pdf"
     fake.write_bytes(b"%PDF-1.4\n")
-    monkeypatch.setattr(paths_mod.os, "name", "posix")
+    monkeypatch.setattr(paths_mod, "_host_is_windows", lambda: False)
     monkeypatch.setattr(
         paths_mod, "_translate_windows_to_wsl", lambda _p: str(fake)
     )
@@ -206,7 +206,7 @@ def test_create_source_accepts_windows_style_path_via_translation(
 
     src = make_digital_pdf(tmp_path / "sample.pdf")
     store = TemplateBuilderStore(work_dir=tmp_path / "work")
-    monkeypatch.setattr(paths_mod.os, "name", "posix")
+    monkeypatch.setattr(paths_mod, "_host_is_windows", lambda: False)
     monkeypatch.setattr(
         paths_mod,
         "_translate_windows_to_wsl",
@@ -239,7 +239,7 @@ def test_submit_job_accepts_windows_style_path_via_translation(
     )
     store = JobStore()
 
-    monkeypatch.setattr(paths_mod.os, "name", "posix")
+    monkeypatch.setattr(paths_mod, "_host_is_windows", lambda: False)
     monkeypatch.setattr(
         paths_mod, "_translate_windows_to_wsl", lambda _p: str(inputs)
     )

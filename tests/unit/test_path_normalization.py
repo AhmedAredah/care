@@ -157,7 +157,7 @@ def test_normalize_input_path_does_not_strip_internal_quotes() -> None:
     """A path with quotes ONLY in the middle (no matched outer pair) is
     left alone — no false positive on filenames containing quotes."""
     out = normalize_input_path('/foo/bar"baz/qux.pdf')
-    assert str(out) == '/foo/bar"baz/qux.pdf'
+    assert out == Path('/foo/bar"baz/qux.pdf')
 
 
 def test_normalize_input_path_does_not_strip_unmatched_quote() -> None:

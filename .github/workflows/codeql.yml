@@ -82,6 +82,25 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Workaround for an upstream bug in CodeQL's Python autobuild:
+      # `exclude_pip_21_3_build_dir_options` walks `build/` looking
+      # for pip artefacts and crashes on a NotADirectoryError when
+      # any regular file lives at the top of `build/` (it scandirs
+      # without isdir-checking first). CARE's `build/` holds
+      # PyInstaller / Inno Setup / WiX scaffolding (.spec, .iss, .wxs,
+      # .ps1, runner.py) which trips this. None of it is Python
+      # security-sensitive code that CodeQL would scan anyway, so we
+      # rename the directory aside for the duration of the run. The
+      # runner is ephemeral, so no restore is needed.
+      - name: Move build/ aside for Python extractor
+        if: matrix.language == 'python'
+        shell: bash
+        run: |
+          if [ -d build ]; then
+            mv build _build_excluded_from_codeql
+            echo "Moved build/ -> _build_excluded_from_codeql/ for the duration of this run."
+          fi
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:

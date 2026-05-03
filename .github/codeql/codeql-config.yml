@@ -31,17 +31,19 @@ paths:
   - care
   - frontend
   - scripts
-  - build/runner.py
-  - build/care.spec
 
 paths-ignore:
   # Test code intentionally constructs unsafe inputs to verify
   # rejection. CodeQL's path/command-injection queries flag the
   # inputs themselves, which is not actionable.
   - tests
-  # Generated installer scaffolding — not application code.
-  - build/dist
-  - build/work
+  # PyInstaller / Inno Setup / WiX / PowerShell scaffolding. Not
+  # Python or JS code CodeQL can usefully analyze, and the Python
+  # autobuild crashes if any regular file lives at the top of
+  # `build/` (see workflow comment). The workflow renames `build/`
+  # aside for the Python run; this entry covers JS and any future
+  # languages.
+  - build
   # Local virtualenvs and tooling caches that may end up checked
   # out on self-hosted runners.
   - "**/.venv"

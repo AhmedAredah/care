@@ -154,20 +154,20 @@ Filename: "{app}\{#ExeName}.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; 
 ; reinstalling to upgrade).
 
 [Code]
-{
-  WebView2 install detection.
-
-  Microsoft documents two registry keys for "is the Evergreen runtime
-  installed?":
-    HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\
-      {F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv
-    HKCU\SOFTWARE\Microsoft\EdgeUpdate\Clients\
-      {F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv
-
-  Either being present (and non-empty) means the runtime is installed
-  for the current user OR machine-wide. Skip the redist run in that
-  case.
-}
+// WebView2 install detection.
+//
+// Microsoft documents two registry keys for "is the Evergreen runtime
+// installed?":
+//   HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\
+//     {F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv
+//   HKCU\SOFTWARE\Microsoft\EdgeUpdate\Clients\
+//     {F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv
+//
+// Either being present (and non-empty) means the runtime is installed
+// for the current user OR machine-wide. Skip the redist run in that
+// case. We deliberately avoid Pascal { } block comments here because
+// Inno Setup's parser does not nest them, and the GUIDs above contain
+// a closing '}' that would prematurely terminate any block comment.
 function InstallWebView2Required(): Boolean;
 var
   Version: String;

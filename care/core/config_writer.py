@@ -30,6 +30,7 @@ import os
 import re
 import shutil
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -150,13 +151,31 @@ def _prune_backups(target: Path, *, max_backups: int) -> None:
             continue
 
 
+def _atomic_replace(tmp: Path, target: Path) -> None:
+    # Windows: AV scanners and lingering read handles (e.g. the
+    # shutil.copy2 we just did for backup) can hold a transient lock on
+    # ``target`` and make ``os.replace`` raise WinError 5. Retry briefly
+    # with backoff before giving up.
+    last_exc: Optional[OSError] = None
+    for delay in (0.0, 0.02, 0.05, 0.1, 0.2):
+        if delay:
+            time.sleep(delay)
+        try:
+            os.replace(tmp, target)
+            return
+        except PermissionError as exc:
+            last_exc = exc
+    assert last_exc is not None
+    raise last_exc
+
+
 def _atomic_write(target: Path, doc: Any, yaml: YAML) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_name(target.name + ".tmp")
     try:
         with tmp.open("w", encoding="utf-8") as fh:
             yaml.dump(doc, fh)
-        os.replace(tmp, target)
+        _atomic_replace(tmp, target)
     except Exception:
         # Best-effort cleanup of the temp file so a failed save
         # doesn't leave clutter next to config.yaml.

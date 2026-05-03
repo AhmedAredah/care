@@ -28,6 +28,7 @@ jobs:
       HF_HUB_DISABLE_TELEMETRY: "1"
       HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
       CARE_OFFLINE: "1"
+      UV_LINK_MODE: "copy"
 
     steps:
       - uses: actions/checkout@v4

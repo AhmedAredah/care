@@ -6,6 +6,14 @@ on:
     branches:
       - main
 
+# Minimal default permissions. Job needs only to checkout source,
+# install dependencies, and run pytest / governance_check.py — none
+# of which require write access to the repo, issues, or any other
+# scope. Each job MAY upgrade this with its own ``permissions:``
+# block if it ever needs to comment on PRs or upload artifacts.
+permissions:
+  contents: read
+
 jobs:
   policy:
     runs-on: ubuntu-latest

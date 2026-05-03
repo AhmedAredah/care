@@ -43,6 +43,47 @@ def test_find_free_port_falls_back_when_taken() -> None:
         assert actual != held_port
 
 
+# ----- loopback enforcement at the bind site ---------------------------
+#
+# ``run_app`` already rejects non-loopback hosts at the outer boundary,
+# but the inner port helpers also assert it themselves so the constraint
+# is local to every ``socket.bind`` call site. This makes the
+# loopback-only guarantee visible to static analysis (CodeQL
+# ``py/bind-socket-all-network-interfaces``) without it having to trace
+# the call graph through ``run_app``.
+
+
+def test_find_free_port_refuses_non_loopback() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="non-loopback"):
+        desktop.find_free_port(7860, host="0.0.0.0")
+
+
+def test_is_port_free_refuses_non_loopback() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="non-loopback"):
+        desktop._is_port_free("0.0.0.0", 7860)
+
+
+def test_assert_loopback_accepts_every_loopback_alias() -> None:
+    # All three loopback hosts must pass without raising. We test the
+    # assertion helper directly so the test does not depend on whether
+    # ``::1`` actually has a working interface on the test runner
+    # (it doesn't on every CI machine).
+    for host in ("127.0.0.1", "localhost", "::1"):
+        desktop._assert_loopback(host)  # must not raise
+
+
+def test_assert_loopback_rejects_wildcards_and_remote_hosts() -> None:
+    import pytest
+
+    for host in ("0.0.0.0", "::", "192.168.1.1", "example.com"):
+        with pytest.raises(ValueError, match="non-loopback"):
+            desktop._assert_loopback(host)
+
+
 # ----- _build_serve_argv ----------------------------------------------
 
 

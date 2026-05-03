@@ -202,12 +202,30 @@ def _attach_windows_icon(window_title: str, ico_path: Path) -> None:
     _log.info("attached app icon to HWND 0x%x", hwnd)
 
 
+def _assert_loopback(host: str) -> None:
+    """Refuse to bind any non-loopback host inside this module.
+
+    The ``cli app`` command's outer ``run_app`` already validates that
+    its ``host`` argument lives in :data:`LOOPBACK_HOSTS` and exits
+    with code 2 otherwise. Re-asserting the same constraint here makes
+    the guarantee local to every ``socket.bind`` site, so static
+    analysis (CodeQL ``py/bind-socket-all-network-interfaces``) can
+    see the constraint without tracing every caller.
+    """
+    if host not in LOOPBACK_HOSTS:
+        raise ValueError(
+            f"refusing to bind socket to non-loopback host {host!r}; "
+            f"the desktop app may only bind to {sorted(LOOPBACK_HOSTS)}."
+        )
+
+
 def find_free_port(preferred: int, host: str = "127.0.0.1") -> int:
     """Return ``preferred`` if it's free, otherwise an OS-assigned port.
 
     Tested with ``SO_REUSEADDR`` to avoid TIME_WAIT pollution between
     quick relaunches of the desktop app.
     """
+    _assert_loopback(host)
     if _is_port_free(host, preferred):
         return preferred
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -216,6 +234,7 @@ def find_free_port(preferred: int, host: str = "127.0.0.1") -> int:
 
 
 def _is_port_free(host: str, port: int) -> bool:
+    _assert_loopback(host)
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

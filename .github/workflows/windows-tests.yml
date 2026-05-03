@@ -17,6 +17,11 @@ on:
     branches:
       - main
 
+# Minimal default permissions — pytest doesn't need write access to
+# the repo, issues, or PRs.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: windows-latest

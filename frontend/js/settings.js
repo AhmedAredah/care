@@ -30,15 +30,31 @@
 
   function joinPath(parts) { return parts.filter(Boolean).join("."); }
 
+  /* Keys that would walk this function into ``Object.prototype`` and
+     pollute every plain object created afterwards. Even though the
+     dotted paths fed to ``setNestedPath`` originate from
+     server-supplied config keys (we render an ``<input>`` per leaf
+     and read ``dataset.configPath`` back), guarding here is the
+     correct place — the function is a generic deep-assign and
+     should refuse to walk into prototypes regardless of caller. */
+  var FORBIDDEN_PROTO_KEYS = { __proto__: 1, constructor: 1, prototype: 1 };
+
   function setNestedPath(obj, dotted, value) {
     var parts = dotted.split(".");
     var node = obj;
     for (var i = 0; i < parts.length - 1; i++) {
       var key = parts[i];
+      if (Object.prototype.hasOwnProperty.call(FORBIDDEN_PROTO_KEYS, key)) {
+        throw new Error("setNestedPath: refused to walk into prototype key: " + key);
+      }
       if (!isPlainObject(node[key])) node[key] = {};
       node = node[key];
     }
-    node[parts[parts.length - 1]] = value;
+    var lastKey = parts[parts.length - 1];
+    if (Object.prototype.hasOwnProperty.call(FORBIDDEN_PROTO_KEYS, lastKey)) {
+      throw new Error("setNestedPath: refused to assign prototype key: " + lastKey);
+    }
+    node[lastKey] = value;
   }
 
   function lockedRuleFor(path, lockedKeys) {

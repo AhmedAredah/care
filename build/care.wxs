@@ -17,8 +17,10 @@
     -d Version=0.1.0
     -d BundleDir=..\dist\core\care       (or the ml path)
 
-  Build command (assumes ``wix.exe`` from
-  ``dotnet tool install --global wix``):
+  Build command (assumes wix.exe is on PATH from a global dotnet
+  tool install of the WiX 6 package — see .github/workflows/windows-build.yml
+  for the exact install incantation; XML comments cannot contain a
+  double-hyphen, so the literal command is documented there):
 
     wix build build\care.wxs `
         -d Flavour=core `

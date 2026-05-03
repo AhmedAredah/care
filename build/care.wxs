@@ -14,7 +14,7 @@
 
   Driven by these wix-build defines:
     -d Flavour=core | ml
-    -d Version=0.1.0
+    -d Version=0.2.0
     -d BundleDir=..\dist\core\care       (or the ml path)
 
   Build command (assumes wix.exe is on PATH from a global dotnet
@@ -24,10 +24,10 @@
 
     wix build build\care.wxs `
         -d Flavour=core `
-        -d Version=0.1.0 `
+        -d Version=0.2.0 `
         -d BundleDir=..\dist\core\care `
         -ext WixToolset.UI.wixext `
-        -o dist\installers\CARE-0.1.0-core.msi
+        -o dist\installers\CARE-0.2.0-core.msi
 
   Stable ``UpgradeCode`` per flavour: same code across versions = MSI
   in-place upgrade. ``ProductCode`` auto-regenerates per build.

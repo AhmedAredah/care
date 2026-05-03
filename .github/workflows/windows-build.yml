@@ -216,27 +216,29 @@ jobs:
       - name: Generate release notes
         env:
           SIGNED: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+          TAG: ${{ github.ref_name }}
         run: |
-          echo "## care ${{ github.ref_name }}" > NOTES.md
-          echo "" >> NOTES.md
-          if [ "$SIGNED" = "true" ]; then
-            echo "Signed by [SignPath Foundation](https://signpath.io/foundation)." >> NOTES.md
+          # Hand-curated notes file at .github/release-notes/<tag>.md is
+          # the preferred body. Fall back to a minimal auto-generated
+          # header if no file is committed for this tag.
+          HAND_NOTES=".github/release-notes/${TAG}.md"
+          if [ -f "$HAND_NOTES" ]; then
+            cp "$HAND_NOTES" NOTES.md
           else
-            echo "> ⚠️ **Unsigned binaries.** SignPath Foundation enrolment is in progress; until then Windows SmartScreen will warn on first launch. Right-click the downloaded file → Properties → tick **Unblock** → OK; or click **More info → Run anyway** in the SmartScreen dialog. Verify SHA-256 against the table at the bottom of these notes before unblocking." >> NOTES.md
+            echo "## care ${TAG}" > NOTES.md
+            echo "" >> NOTES.md
+            echo "_(no curated release notes were committed for this tag — see commit history.)_" >> NOTES.md
           fi
           echo "" >> NOTES.md
-          echo "### Variants" >> NOTES.md
+          echo "---" >> NOTES.md
           echo "" >> NOTES.md
-          echo "| File | Flavour | WebView2 | Notes |" >> NOTES.md
-          echo "|---|---|---|---|" >> NOTES.md
-          echo "| CARE-*-core-online-Setup.exe | Core | Online (~2 MB bootstrapper) | Default desktop installer |" >> NOTES.md
-          echo "| CARE-*-core-airgap-Setup.exe | Core | Airgap (~150 MB) | For offline/air-gapped workstations |" >> NOTES.md
-          echo "| CARE-*-ml-online-Setup.exe   | ML   | Online | Bundles torch + transformers (~2 GB) |" >> NOTES.md
-          echo "| CARE-*-ml-airgap-Setup.exe   | ML   | Airgap | ml + offline WebView2 |" >> NOTES.md
-          echo "| CARE-*-core.msi              | Core | Prerequisite | SCCM/Intune; admins pre-stage WebView2 |" >> NOTES.md
-          echo "| CARE-*-ml.msi                | ML   | Prerequisite | SCCM/Intune (ML) |" >> NOTES.md
+          if [ "$SIGNED" = "true" ]; then
+            echo "**Signing.** Binaries are signed by [SignPath Foundation](https://signpath.io/foundation), the OSS code-signing program." >> NOTES.md
+          else
+            echo "**Signing.** These binaries are **unsigned** — SignPath Foundation enrolment is in progress. SmartScreen will warn on first launch; verify the SHA-256 below before clicking **More info → Run anyway** (or right-click → Properties → tick **Unblock** → OK)." >> NOTES.md
+          fi
           echo "" >> NOTES.md
-          echo "### SHA-256" >> NOTES.md
+          echo "### SHA-256 verification" >> NOTES.md
           echo "" >> NOTES.md
           echo "\`\`\`" >> NOTES.md
           (cd release-assets && sha256sum *) >> NOTES.md

@@ -156,7 +156,7 @@ $body
         Write-Host "  generated LICENSE.rtf"
     }
 
-    $Version = "0.1.0"   # keep in sync with pyproject.toml [project].version
+    $Version = "0.2.0"   # keep in sync with pyproject.toml [project].version
     $InstallersDir = Join-Path $ProjectRoot "dist\installers"
     New-Item -ItemType Directory -Force -Path $InstallersDir | Out-Null
 

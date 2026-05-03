@@ -62,7 +62,7 @@ ml = [
 # matching cloud provider is enabled. None of these are reached at
 # runtime in offline mode (the offline guard rejects cloud providers
 # before any SDK call).
-llm-openai = ["openai>=1.40"]
+llm-openai = ["openai>=2.33.0"]
 llm-anthropic = ["anthropic>=0.30"]
 llm-gemini = ["google-generativeai>=0.7"]
 

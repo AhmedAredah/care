@@ -227,6 +227,63 @@ def build_banner(icon_master: Image.Image) -> Image.Image:
     return bg
 
 
+def build_social_card(icon_master: Image.Image) -> Image.Image:
+    """1280×640 GitHub social-preview card.
+
+    GitHub recommends 1280×640 for OG images. Layout mirrors the
+    README banner — same colours, same underline — but with the icon
+    larger and the wordmark vertically centred so it reads cleanly in
+    Twitter / LinkedIn / Slack link previews.
+    """
+    W, H = 1280, 640
+    bg = _vertical_gradient((W, H), NAVY_TOP, NAVY)
+
+    icon_size = 360
+    icon = icon_master.resize((icon_size, icon_size), Image.LANCZOS)
+    icon_x = 96
+    icon_y = (H - icon_size) // 2
+    bg.alpha_composite(icon, (icon_x, icon_y))
+
+    draw = ImageDraw.Draw(bg)
+    text_x = icon_x + icon_size + 72
+
+    title_font = ImageFont.truetype(FONT_BOLD, 144)
+    sub_font = ImageFont.truetype(FONT_REG, 44)
+    foot_font = ImageFont.truetype(FONT_REG, 28)
+
+    title_y = 168
+    draw.text((text_x, title_y), "CARE", font=title_font, fill=WHITE)
+
+    title_bbox = draw.textbbox((text_x, title_y), "CARE", font=title_font)
+    bar_top = title_bbox[3] + 18
+    bar_bottom = bar_top + 12
+    bar_left = title_bbox[0]
+    bar_right = title_bbox[2]
+    draw.rounded_rectangle(
+        (bar_left, bar_top, bar_right, bar_bottom),
+        radius=6,
+        fill=AMBER,
+    )
+
+    sub_y = bar_bottom + 32
+    draw.text(
+        (text_x, sub_y),
+        "Crash Analysis & Redaction Engine",
+        font=sub_font,
+        fill=SLATE_300,
+    )
+
+    foot_y = sub_y + 72
+    draw.text(
+        (text_x, foot_y),
+        "Offline-first  ·  Fail-closed  ·  Plugin-based",
+        font=foot_font,
+        fill=SLATE_400,
+    )
+
+    return bg
+
+
 def main() -> None:
     ASSETS.mkdir(parents=True, exist_ok=True)
     master = build_master()
@@ -236,6 +293,7 @@ def main() -> None:
     icon_ico = ASSETS / "icon.ico"
     icon_icns = ASSETS / "icon.icns"
     banner_png = ASSETS / "banner.png"
+    social_png = ASSETS / "social-card.png"
 
     master.resize((256, 256), Image.LANCZOS).save(icon_png, "PNG", optimize=True)
     master.resize((512, 512), Image.LANCZOS).save(icon_2x, "PNG", optimize=True)
@@ -250,8 +308,12 @@ def main() -> None:
     # ~1012px content width).
     build_banner(master).save(banner_png, "PNG", optimize=True)
 
+    # GitHub social-preview card (1280×640 — what's pulled into Twitter
+    # / LinkedIn / Slack link previews via the og:image meta tag).
+    build_social_card(master).save(social_png, "PNG", optimize=True)
+
     print("wrote:")
-    for p in (icon_png, icon_2x, icon_ico, icon_icns, banner_png):
+    for p in (icon_png, icon_2x, icon_ico, icon_icns, banner_png, social_png):
         print(f"  {p.relative_to(REPO_ROOT)}  ({p.stat().st_size:,} bytes)")
 
 

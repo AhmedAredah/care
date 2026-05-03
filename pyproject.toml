@@ -44,7 +44,7 @@ dependencies = [
     # bundled Chromium. On Linux, operators may also need to install
     # system GTK/WebKit packages (see docs/deployment.md). The CLI
     # surfaces a clear runtime error when those are missing.
-    "pywebview>=5.4",
+    "pywebview>=6.2.1",
     "uvicorn>=0.46.0",
 ]
 

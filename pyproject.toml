@@ -45,6 +45,12 @@ dependencies = [
     # system GTK/WebKit packages (see docs/deployment.md). The CLI
     # surfaces a clear runtime error when those are missing.
     "pywebview>=5.4",
+    # pywebview's Windows backend talks to WinForms via .NET interop,
+    # which requires pythonnet (the ``clr`` module). Without it, the
+    # GUI fails at startup with "No module named 'clr'". Linux uses
+    # GTK/WebKit and macOS uses Cocoa WebKit — neither needs pythonnet,
+    # so it's gated behind a sys_platform marker.
+    "pythonnet>=3.0.3 ; sys_platform == 'win32'",
     "uvicorn>=0.46.0",
 ]
 

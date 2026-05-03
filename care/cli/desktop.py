@@ -105,6 +105,42 @@ def _set_windows_app_user_model_id(app_id: str = APP_USER_MODEL_ID) -> None:
         _log.debug("SetCurrentProcessExplicitAppUserModelID failed: %s", exc)
 
 
+def _bootstrap_pythonnet_for_winforms() -> bool:
+    """Initialise the .NET runtime so ``import clr`` works.
+
+    pywebview's WinForms backend does ``import clr`` at module load
+    time. In pythonnet 3.x, ``clr`` is a virtual module whose meta-loader
+    is registered by ``pythonnet.load()`` — until that runs, a bare
+    ``import clr`` raises ``ModuleNotFoundError: No module named 'clr'``
+    and pywebview falls through to its "you must have pythonnet
+    installed" error message. The package IS installed; the runtime
+    just hasn't been bootstrapped yet.
+
+    Calling ``pythonnet.load()`` here primes the runtime (CoreCLR /
+    .NET Framework / Mono per ``PYTHONNET_RUNTIME``, defaulting to
+    netfx on Windows) so the subsequent ``import clr`` inside pywebview
+    succeeds.
+
+    Returns True on success, False on failure. Non-Windows hosts
+    no-op and return True (their pywebview backends don't use clr).
+    """
+    if sys.platform != "win32":
+        return True
+    try:
+        import pythonnet  # type: ignore[import-not-found]
+
+        pythonnet.load()
+        return True
+    except Exception as exc:  # noqa: BLE001
+        _log.error(
+            "pythonnet bootstrap failed (%s); the GUI cannot start. "
+            "Confirm .NET runtime is installed and PYTHONNET_RUNTIME "
+            "is unset or set to 'netfx' / 'coreclr'.",
+            exc,
+        )
+        return False
+
+
 def _attach_windows_icon(window_title: str, ico_path: Path) -> None:
     """Set the title-bar + Alt-Tab icon for the running pywebview window.
 
@@ -407,14 +443,30 @@ def run_app(
         # pywebview calls this ``storage_path``; ``private_mode=False``
         # is required for the path to actually persist anything (the
         # default is private/incognito which throws cookies + cache
-        # away on close). ``icon=`` is honoured only on GTK/Qt — on
-        # Windows it's a no-op (the WM_SETICON hook above handles it).
+        # away on close).
+        #
+        # ``icon=`` is consumed by the chosen GUI backend:
+        #   - GTK / Qt: accept a PNG and use it for the window icon.
+        #   - WinForms (pywebview >=5 on Windows): feed the path to
+        #     ``System.Drawing.Icon(path)``, which only accepts ``.ico``
+        #     files. Passing a PNG raises ArgumentException on the
+        #     GUI thread and crashes the app. We drive the Windows
+        #     icon ourselves via ``WM_SETICON`` in
+        #     ``_attach_windows_icon``, so on Windows we skip ``icon=``
+        #     entirely.
         start_kwargs: dict[str, Any] = {
             "storage_path": str(user_data_dir),
             "private_mode": False,
         }
-        if png_path is not None:
+        if png_path is not None and sys.platform != "win32":
             start_kwargs["icon"] = str(png_path)
+
+        # On Windows, prime pythonnet so pywebview's winforms backend
+        # can ``import clr`` successfully. On other platforms this is
+        # a no-op.
+        if not _bootstrap_pythonnet_for_winforms():
+            return 4
+
         webview.start(**start_kwargs)
         return 0
     finally:

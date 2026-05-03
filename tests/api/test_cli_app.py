@@ -332,15 +332,15 @@ def test_attach_windows_icon_no_op_off_windows(tmp_path, monkeypatch) -> None:
 def test_run_app_passes_png_icon_to_webview_start(
     monkeypatch, tmp_path: Path
 ) -> None:
-    """When the bundled assets/icon.png exists, run_app must pass it
-    as ``icon=`` to ``webview.start`` so GTK/Qt picks it up. Windows
-    still ignores this kwarg by design — handled separately."""
+    """Off-Windows, run_app must pass the bundled assets/icon.png as
+    ``icon=`` to ``webview.start`` so GTK/Qt picks it up."""
     cfg = AppConfig()
     cfg.paths.work_dir = str(tmp_path / "work")
 
     fake_proc = _FakeProc()
     fake_webview = _FakeWebview()
 
+    monkeypatch.setattr(desktop.sys, "platform", "linux")
     monkeypatch.setattr(desktop.subprocess, "Popen", lambda *a, **kw: fake_proc)
     monkeypatch.setattr(desktop, "wait_for_server", lambda *a, **kw: True)
     monkeypatch.setitem(sys.modules, "webview", fake_webview)
@@ -354,6 +354,39 @@ def test_run_app_passes_png_icon_to_webview_start(
     # repo dropped it the test surfaces it.
     assert icon_kw is not None
     assert icon_kw.endswith("icon.png")
+
+
+def test_run_app_does_not_pass_icon_to_webview_start_on_windows(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """On Windows, ``webview.start(icon=...)`` reaches pywebview's
+    WinForms backend, which feeds the path to ``System.Drawing.Icon``.
+    That .NET class only accepts ``.ico`` files; a PNG raises
+    ArgumentException on the GUI thread and crashes the app. The
+    Windows icon is set out-of-band via ``WM_SETICON`` in
+    ``_attach_windows_icon`` instead, so on Windows we must omit
+    ``icon=`` entirely."""
+    cfg = AppConfig()
+    cfg.paths.work_dir = str(tmp_path / "work")
+
+    fake_proc = _FakeProc()
+    fake_webview = _FakeWebview()
+
+    monkeypatch.setattr(desktop.sys, "platform", "win32")
+    monkeypatch.setattr(desktop.subprocess, "Popen", lambda *a, **kw: fake_proc)
+    monkeypatch.setattr(desktop, "wait_for_server", lambda *a, **kw: True)
+    monkeypatch.setitem(sys.modules, "webview", fake_webview)
+    # Block the real Windows-only helpers from doing anything ctypes-y
+    # or .NET-y on a Linux test runner.
+    monkeypatch.setattr(desktop, "_attach_windows_icon", lambda *a, **kw: None)
+    monkeypatch.setattr(desktop, "_set_windows_app_user_model_id", lambda *a, **kw: None)
+    monkeypatch.setattr(desktop, "_bootstrap_pythonnet_for_winforms", lambda: True)
+
+    rc = desktop.run_app(
+        config=cfg, config_path=None, host="127.0.0.1", port=7860,
+    )
+    assert rc == 0
+    assert "icon" not in fake_webview.start_kwargs
 
 
 def test_run_app_registers_windows_icon_hook(monkeypatch, tmp_path: Path) -> None:
@@ -370,9 +403,11 @@ def test_run_app_registers_windows_icon_hook(monkeypatch, tmp_path: Path) -> Non
     monkeypatch.setattr(desktop.subprocess, "Popen", lambda *a, **kw: fake_proc)
     monkeypatch.setattr(desktop, "wait_for_server", lambda *a, **kw: True)
     monkeypatch.setitem(sys.modules, "webview", fake_webview)
-    # Block the actual ctypes call from running by stubbing the helper.
+    # Block the actual ctypes / .NET calls from running by stubbing
+    # the helpers that own them.
     monkeypatch.setattr(desktop, "_attach_windows_icon", lambda *a, **kw: None)
     monkeypatch.setattr(desktop, "_set_windows_app_user_model_id", lambda *a, **kw: None)
+    monkeypatch.setattr(desktop, "_bootstrap_pythonnet_for_winforms", lambda: True)
 
     rc = desktop.run_app(
         config=cfg, config_path=None, host="127.0.0.1", port=7860,
@@ -382,3 +417,89 @@ def test_run_app_registers_windows_icon_hook(monkeypatch, tmp_path: Path) -> Non
     assert win is not None
     # One shown-handler was registered (the icon-attach lambda).
     assert len(win.events.shown_handlers) == 1
+
+
+def test_run_app_bootstraps_pythonnet_on_windows(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """On Windows, run_app must call ``pythonnet.load()`` before
+    ``webview.start()`` — otherwise pywebview's WinForms backend does
+    ``import clr`` and crashes with ``ModuleNotFoundError`` because
+    pythonnet 3.x's ``clr`` meta-loader has not been registered yet.
+
+    The bootstrap must run AFTER ``webview.create_window`` (so the
+    pywebview module is imported) but BEFORE ``webview.start()``."""
+    cfg = AppConfig()
+    cfg.paths.work_dir = str(tmp_path / "work")
+
+    fake_proc = _FakeProc()
+    fake_webview = _FakeWebview()
+
+    monkeypatch.setattr(desktop.sys, "platform", "win32")
+    monkeypatch.setattr(desktop.subprocess, "Popen", lambda *a, **kw: fake_proc)
+    monkeypatch.setattr(desktop, "wait_for_server", lambda *a, **kw: True)
+    monkeypatch.setitem(sys.modules, "webview", fake_webview)
+    monkeypatch.setattr(desktop, "_attach_windows_icon", lambda *a, **kw: None)
+    monkeypatch.setattr(desktop, "_set_windows_app_user_model_id", lambda *a, **kw: None)
+
+    calls: list[str] = []
+
+    def fake_bootstrap() -> bool:
+        calls.append("bootstrap")
+        return True
+
+    original_start = fake_webview.start
+
+    def fake_start(**kwargs):
+        calls.append("start")
+        return original_start(**kwargs)
+
+    monkeypatch.setattr(desktop, "_bootstrap_pythonnet_for_winforms", fake_bootstrap)
+    monkeypatch.setattr(fake_webview, "start", fake_start)
+
+    rc = desktop.run_app(
+        config=cfg, config_path=None, host="127.0.0.1", port=7860,
+    )
+    assert rc == 0
+    # Bootstrap ran before webview.start.
+    assert calls == ["bootstrap", "start"]
+
+
+def test_run_app_returns_4_when_pythonnet_bootstrap_fails(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A failed ``pythonnet.load()`` (e.g., no .NET runtime installed)
+    must return exit code 4 instead of crashing inside pywebview. The
+    GUI cannot start without the runtime; surfacing exit code 4 lets
+    the CLI/installer present a clear remediation."""
+    cfg = AppConfig()
+    cfg.paths.work_dir = str(tmp_path / "work")
+
+    fake_proc = _FakeProc()
+    fake_webview = _FakeWebview()
+
+    monkeypatch.setattr(desktop.sys, "platform", "win32")
+    monkeypatch.setattr(desktop.subprocess, "Popen", lambda *a, **kw: fake_proc)
+    monkeypatch.setattr(desktop, "wait_for_server", lambda *a, **kw: True)
+    monkeypatch.setitem(sys.modules, "webview", fake_webview)
+    monkeypatch.setattr(desktop, "_attach_windows_icon", lambda *a, **kw: None)
+    monkeypatch.setattr(desktop, "_set_windows_app_user_model_id", lambda *a, **kw: None)
+    monkeypatch.setattr(desktop, "_bootstrap_pythonnet_for_winforms", lambda: False)
+
+    rc = desktop.run_app(
+        config=cfg, config_path=None, host="127.0.0.1", port=7860,
+    )
+    assert rc == 4
+    # webview.start must not have been called when bootstrap fails.
+    assert fake_webview.start_kwargs == {}
+
+
+def test_bootstrap_pythonnet_is_noop_on_non_windows(monkeypatch) -> None:
+    """The bootstrap is a no-op on Linux/macOS — those pywebview
+    backends (GTK/Qt, Cocoa) don't go through clr. We verify by
+    swapping ``sys.platform`` and asserting the helper returns True
+    without trying to import pythonnet."""
+    monkeypatch.setattr(desktop.sys, "platform", "linux")
+    # Even if pythonnet were missing entirely, this must succeed.
+    monkeypatch.setitem(sys.modules, "pythonnet", None)
+    assert desktop._bootstrap_pythonnet_for_winforms() is True

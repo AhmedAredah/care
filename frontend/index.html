@@ -4,226 +4,701 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="referrer" content="no-referrer" />
-<title>care</title>
+<title>CARE — Crash Analysis & Redaction Engine</title>
 <link rel="stylesheet" href="/css/app.css" />
 </head>
 <body>
-<header>
-  <h1>care</h1>
-  <nav>
-    <a href="#dashboard" data-view="dashboard">Dashboard</a>
-    <a href="#jobs" data-view="jobs">Jobs</a>
-    <a href="#reports" data-view="reports">Reports</a>
-    <a href="#exports" data-view="exports">Exports</a>
-    <a href="#plugins" data-view="plugins">Plugins</a>
-    <a href="#offline" data-view="offline">Offline</a>
-    <a href="#settings" data-view="settings">Settings</a>
-    <a href="#template-builder" data-view="template-builder">Template builder</a>
-  </nav>
-  <div id="offline-badge" class="badge badge-warn" title="offline status unknown">offline?</div>
-</header>
 
-<main id="main">
-  <!-- Dashboard ---------------------------------------------------------- -->
-  <section id="view-dashboard" class="view">
-    <h2>Dashboard</h2>
-    <div class="grid">
-      <div class="card">
-        <h3>Submit a job</h3>
-        <p class="muted">Run the local pipeline against a directory of crash report files.</p>
-        <form id="submit-job-form">
-          <label for="input-dir">Input directory (absolute path)</label>
-          <input type="text" id="input-dir" name="input_dir" placeholder="/abs/path/to/inputs" required />
-          <label for="job-jurisdiction">
-            Jurisdiction <span class="muted small">(optional — leave blank to consider all templates)</span>
-          </label>
-          <input type="text" id="job-jurisdiction" name="jurisdiction" placeholder="example_state" />
-          <label for="job-template-ids">
-            Template ids <span class="muted small">(optional, comma-separated — narrows to these template_ids only)</span>
-          </label>
-          <input type="text" id="job-template-ids" name="template_ids" placeholder="example_state_crash_v1, example_state_crash_v2" />
-          <button type="submit">Submit job</button>
-        </form>
-        <pre id="submit-job-result" class="result hidden"></pre>
-      </div>
-      <div class="card">
-        <h3>Counts</h3>
-        <ul id="dashboard-counts">
-          <li>Jobs: <strong data-count="jobs">…</strong></li>
-          <li>Reports: <strong data-count="reports">…</strong></li>
-          <li>Blocked: <strong data-count="blocked">…</strong></li>
-          <li>Approved: <strong data-count="approved">…</strong></li>
-        </ul>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<!-- Toast region for short-lived status messages. Polite live region so
+     screen readers announce updates without interrupting other speech. -->
+<div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2 L3 6 V12 C3 17 7 21 12 22 C17 21 21 17 21 12 V6 Z"></path>
+        <path d="M9 12 l2 2 l4 -4"></path>
+      </svg>
+    </span>
+    <span class="brand-name">CARE</span>
+    <span class="brand-tagline muted small" aria-hidden="true">Crash Analysis &amp; Redaction Engine</span>
+  </div>
+
+  <div id="offline-status" class="offline-status offline-status-unknown"
+       role="status" aria-live="polite"
+       title="Offline-mode status — click for diagnostics">
+    <span class="offline-dot" aria-hidden="true"></span>
+    <span class="offline-label">Checking offline status…</span>
+  </div>
+
+  <nav class="primary-nav" aria-label="Primary">
+    <a href="#process" data-view="process" class="nav-link">
+      <span class="nav-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="5 12 10 17 19 8"></polyline>
+        </svg>
+      </span>
+      Process
+    </a>
+    <a href="#review" data-view="review" class="nav-link">
+      <span class="nav-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+        </svg>
+      </span>
+      Review
+    </a>
+    <a href="#export" data-view="export" class="nav-link">
+      <span class="nav-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7 H10 L12 9 H21 V19 H3 Z"></path>
+        </svg>
+      </span>
+      Export
+    </a>
+
+    <div class="nav-advanced">
+      <button type="button" id="advanced-menu-btn" class="nav-link nav-advanced-btn"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="advanced-menu">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19 12 a7 7 0 0 0 -.13 -1.3 l2 -1.55 -2 -3.46 -2.4 .96 a7 7 0 0 0 -2.25 -1.3 L13.7 3 h-3.4 l-.52 2.35 a7 7 0 0 0 -2.25 1.3 l-2.4 -.96 -2 3.46 2 1.55 a7 7 0 0 0 0 2.6 l-2 1.55 2 3.46 2.4 -.96 a7 7 0 0 0 2.25 1.3 L10.3 21 h3.4 l.52 -2.35 a7 7 0 0 0 2.25 -1.3 l2.4 .96 2 -3.46 -2 -1.55 a7 7 0 0 0 .13 -1.3 z"></path>
+          </svg>
+        </span>
+        Advanced
+        <span class="nav-caret" aria-hidden="true">▾</span>
+      </button>
+      <div id="advanced-menu" class="nav-menu hidden" role="menu" aria-labelledby="advanced-menu-btn">
+        <a href="#plugins" data-view="plugins" role="menuitem" class="nav-menu-item">
+          Plugins
+          <span class="muted small">OCR · VLM · PII providers</span>
+        </a>
+        <a href="#templates" data-view="templates" role="menuitem" class="nav-menu-item">
+          Template builder
+          <span class="muted small">Author state-and-version YAML</span>
+        </a>
+        <a href="#settings" data-view="settings" role="menuitem" class="nav-menu-item">
+          Settings
+          <span class="muted small">Configuration &amp; secrets</span>
+        </a>
+        <a href="#diagnostics" data-view="diagnostics" role="menuitem" class="nav-menu-item">
+          Diagnostics
+          <span class="muted small">Offline guard · health checks</span>
+        </a>
       </div>
     </div>
+  </nav>
+</header>
+
+<main id="main" class="app-main">
+
+  <!-- =================================================================
+       PROCESS VIEW (was Dashboard + Jobs)
+       ================================================================= -->
+  <section id="view-process" class="view">
+    <div class="view-header">
+      <div>
+        <h2>Process crash reports</h2>
+        <p class="muted small view-subtitle">
+          Run the local pipeline against a folder of police crash report
+          PDFs or scanned images. Files are read in place — originals are
+          never modified, copied to the export directory, or sent off this
+          machine.
+        </p>
+      </div>
+      <button type="button" id="new-job-btn" class="btn-primary btn-large">
+        <span class="btn-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </span>
+        New processing run
+      </button>
+    </div>
+
+    <!-- Active jobs (live polling). Hidden when no jobs are running. -->
+    <div id="active-jobs" class="active-jobs hidden" aria-live="polite"></div>
+
+    <!-- Recent jobs timeline. -->
+    <section class="card" aria-labelledby="recent-jobs-title">
+      <div class="card-header">
+        <h3 id="recent-jobs-title">Recent runs</h3>
+        <details class="help-tip">
+          <summary aria-label="What is a processing run?">What is a run?</summary>
+          <p class="small">
+            A <strong>processing run</strong> is one batch invocation of the
+            CARE pipeline: ingest → template detection → OCR/VLM extraction
+            → PII detection → redaction → export. Each input file in the
+            chosen folder produces one <strong>report</strong>. Reports
+            whose extraction is uncertain are <em>fail-closed</em>: their
+            redacted artifacts exist on disk but are flagged for human
+            review before release.
+          </p>
+        </details>
+      </div>
+      <div id="jobs-empty" class="empty-state hidden">
+        <div class="empty-state-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7 H10 L12 9 H21 V19 H3 Z"></path>
+            <line x1="12" y1="13" x2="12" y2="17"></line>
+            <line x1="10" y1="15" x2="14" y2="15"></line>
+          </svg>
+        </div>
+        <h4>No runs yet</h4>
+        <p class="muted small">
+          Click <strong>New processing run</strong> above to point CARE at
+          a folder of crash report PDFs.
+        </p>
+      </div>
+      <table class="data-table" id="jobs-table">
+        <thead>
+          <tr>
+            <th>Run ID</th>
+            <th>Status</th>
+            <th>Submitted</th>
+            <th>Reports</th>
+            <th>Filter</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="jobs-tbody"></tbody>
+      </table>
+    </section>
   </section>
 
-  <!-- Job list ----------------------------------------------------------- -->
-  <section id="view-jobs" class="view hidden">
-    <h2>Jobs</h2>
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Job ID</th>
-          <th>Status</th>
-          <th>Submitted</th>
-          <th>Reports</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="jobs-tbody"></tbody>
-    </table>
-  </section>
+  <!-- =================================================================
+       REVIEW VIEW (was Reports)
+       ================================================================= -->
+  <section id="view-review" class="view hidden">
+    <div class="view-header">
+      <div>
+        <h2>Review reports</h2>
+        <p class="muted small view-subtitle">
+          Reports the pipeline finished. The <strong>fail-closed gate</strong>
+          decides whether each one is exportable. Approve only after you've
+          opened the redacted crash diagram and officer's narrative below
+          and confirmed no PII slipped through.
+        </p>
+      </div>
+    </div>
 
-  <!-- Report list -------------------------------------------------------- -->
-  <section id="view-reports" class="view hidden">
-    <h2>Reports</h2>
-    <table class="data-table">
+    <div class="queue-tabs" role="tablist" aria-label="Review queue">
+      <button type="button" role="tab" class="queue-tab active"
+              data-queue="attention" aria-selected="true">
+        Needs attention <span class="queue-count" data-queue-count="attention">0</span>
+      </button>
+      <button type="button" role="tab" class="queue-tab"
+              data-queue="approved" aria-selected="false">
+        Approved <span class="queue-count" data-queue-count="approved">0</span>
+      </button>
+      <button type="button" role="tab" class="queue-tab"
+              data-queue="rejected" aria-selected="false">
+        Rejected <span class="queue-count" data-queue-count="rejected">0</span>
+      </button>
+      <button type="button" role="tab" class="queue-tab"
+              data-queue="all" aria-selected="false">
+        All <span class="queue-count" data-queue-count="all">0</span>
+      </button>
+    </div>
+
+    <details class="help-tip">
+      <summary>What does each queue mean?</summary>
+      <div class="small">
+        <p>
+          <strong>Needs attention</strong> — reports the pipeline either
+          blocked (export refused by the QA gate) or marked
+          <em>requires_human_review</em> (e.g. low template confidence,
+          OCR/VLM disagreement, unmapped PII). Nothing here can be released
+          publicly until you act on it.
+        </p>
+        <p>
+          <strong>Approved</strong> — reports a reviewer has signed off on.
+          The redacted artifacts on disk are considered safe for release.
+        </p>
+        <p>
+          <strong>Rejected</strong> — reports a reviewer marked unsuitable.
+          The redacted artifacts remain on disk for audit but should not
+          be released.
+        </p>
+      </div>
+    </details>
+
+    <div id="review-empty" class="empty-state hidden">
+      <p class="muted">No reports in this queue.</p>
+    </div>
+    <table class="data-table" id="review-table">
       <thead>
         <tr>
           <th>Report</th>
           <th>Template</th>
-          <th>Decision</th>
-          <th>Review</th>
-          <th>QA flags</th>
+          <th>Pipeline decision</th>
+          <th>Reviewer</th>
+          <th>Top concern</th>
           <th></th>
         </tr>
       </thead>
-      <tbody id="reports-tbody"></tbody>
+      <tbody id="review-tbody"></tbody>
     </table>
   </section>
 
-  <!-- Report detail ------------------------------------------------------ -->
+  <!-- =================================================================
+       REPORT DETAIL VIEW
+       ================================================================= -->
   <section id="view-report-detail" class="view hidden">
-    <h2 id="report-detail-title">Report</h2>
-    <div class="grid">
-      <div class="card" id="report-meta-card">
-        <h3>Template result</h3>
-        <dl id="report-meta"></dl>
-      </div>
-      <div class="card" id="report-qa-card">
-        <h3>QA warnings</h3>
-        <ul id="report-qa-flags" class="qa-flags"></ul>
-        <div id="report-blocking-reasons"></div>
-      </div>
+    <div class="report-detail-header">
+      <a href="#review" class="back-link" aria-label="Back to review queue">
+        <span aria-hidden="true">←</span> Back to review
+      </a>
+      <h2 id="report-detail-title">Report</h2>
+      <p class="muted small" id="report-detail-subtitle"></p>
     </div>
-    <div class="grid">
-      <div class="card">
-        <h3>Diagram preview (redacted)</h3>
-        <img id="diagram-preview" alt="redacted diagram" />
-        <p class="muted small" id="diagram-status"></p>
+
+    <!-- Decision banner. Color and copy reflect the QA gate state. -->
+    <div id="decision-banner" class="decision-banner decision-banner-unknown" role="status">
+      <div class="decision-banner-icon" aria-hidden="true"></div>
+      <div class="decision-banner-body">
+        <h3 id="decision-banner-title">Loading…</h3>
+        <p id="decision-banner-subtitle" class="small"></p>
       </div>
-      <div class="card">
-        <h3>Narrative preview (redacted)</h3>
-        <pre id="narrative-text" class="narrative"></pre>
-        <h4>PII highlights</h4>
-        <ul id="pii-highlights" class="pii-list"></ul>
-      </div>
+      <div class="decision-banner-actions" id="decision-banner-actions"></div>
     </div>
-    <div class="card">
-      <h3>Reviewer actions</h3>
-      <p class="muted small">
-        Approval and rejection update the in-memory review state only.
-        They never bypass the QA gate; if the pipeline blocked the report,
-        approval is disabled until the upstream issue is corrected.
-      </p>
-      <form id="review-form">
-        <label for="reviewer">Reviewer name</label>
-        <input type="text" id="reviewer" name="reviewer" />
-        <label for="review-notes">Notes</label>
-        <textarea id="review-notes" name="notes" rows="3"></textarea>
-        <div class="row">
-          <button type="button" id="approve-btn">Approve</button>
-          <button type="button" id="reject-btn" class="danger">Reject</button>
+
+    <!-- Two-pane review layout: crash diagram (left), narrative (right). -->
+    <div class="review-grid">
+      <div class="review-pane">
+        <div class="card review-pane-card">
+          <div class="card-header">
+            <h3>Redacted crash diagram</h3>
+            <details class="help-tip">
+              <summary aria-label="About the crash diagram">What's this?</summary>
+              <p class="small">
+                The <strong>crash diagram</strong> (sometimes called the
+                <em>scene diagram</em>) is the bird's-eye view drawn by the
+                officer showing roadway layout, lane positions, direction of
+                travel, and point of impact. CARE crops it from the original
+                page and applies pixel-mask redaction over any PII it
+                detects inside the crop.
+              </p>
+            </details>
+          </div>
+          <div id="diagram-host" class="diagram-host">
+            <p class="muted small" id="diagram-status">Loading…</p>
+          </div>
+          <p class="small muted">
+            <strong>Originals are never served by this app.</strong>
+            The <code>/api/reports/&lt;id&gt;/diagram</code> endpoint only
+            returns the redacted crop.
+          </p>
         </div>
-        <pre id="review-result" class="result hidden"></pre>
+
+        <div class="card review-pane-card">
+          <div class="card-header">
+            <h3>Pipeline metadata</h3>
+            <details class="help-tip">
+              <summary>Field definitions</summary>
+              <dl class="help-dl small">
+                <dt>Template</dt>
+                <dd>Detected state-and-version form (e.g. <code>example_state_crash_v1</code>).</dd>
+                <dt>Template confidence</dt>
+                <dd>Score from anchor-word and form-number matching. Below the configured threshold blocks export (<em>TEMPLATE_UNKNOWN</em>).</dd>
+                <dt>Diagram / narrative confidence</dt>
+                <dd>Region-extraction scores. Low scores mark the report for human review.</dd>
+                <dt>Text source</dt>
+                <dd>Where the narrative text came from: <code>native</code> (PDF text layer), <code>ocr</code>, or <code>vlm</code>.</dd>
+              </dl>
+            </details>
+          </div>
+          <dl id="report-meta" class="meta-dl"></dl>
+        </div>
+      </div>
+
+      <div class="review-pane">
+        <div class="card review-pane-card">
+          <div class="card-header">
+            <h3>Officer's narrative <span class="muted small">(redacted)</span></h3>
+            <details class="help-tip">
+              <summary aria-label="About the officer's narrative">What's this?</summary>
+              <p class="small">
+                The <strong>officer's narrative</strong> is the free-text
+                description of the crash sequence the officer wrote at the
+                scene. CARE redacts every PII span the detector chain found,
+                replacing it with a placeholder
+                (e.g. <code>[NAME]</code>, <code>[VIN]</code>,
+                <code>Driver #1</code>). Click a highlight to see which
+                detector flagged it.
+              </p>
+            </details>
+          </div>
+          <div id="narrative-host" class="narrative-host">
+            <p class="muted small">Loading…</p>
+          </div>
+        </div>
+
+        <div class="card review-pane-card">
+          <div class="card-header">
+            <h3>What was redacted</h3>
+            <details class="help-tip">
+              <summary>About the PII inventory</summary>
+              <p class="small">
+                Every redacted span is listed here with its <strong>entity
+                type</strong> (NAME, VIN, PHONE…), the <strong>provider</strong>
+                that detected it (regex, Presidio, Piiranha…), and the
+                <strong>character offsets</strong> within the redacted
+                narrative. Click a row to highlight the matching span on the
+                left.
+              </p>
+            </details>
+          </div>
+          <ul id="pii-list" class="pii-list"></ul>
+          <p id="pii-empty" class="muted small hidden">
+            No PII entities reported for this narrative.
+          </p>
+        </div>
+
+        <div class="card review-pane-card">
+          <div class="card-header">
+            <h3>QA flags</h3>
+            <details class="help-tip">
+              <summary>About QA flags</summary>
+              <p class="small">
+                <strong>QA flags</strong> are machine-readable codes the
+                pipeline emits when something is uncertain or suspicious.
+                Some flags are <em>blocking</em> — they prevent public
+                export until a reviewer or operator resolves the underlying
+                issue. Hover any flag for a plain-English explanation.
+              </p>
+            </details>
+          </div>
+          <ul id="qa-flags" class="qa-flags"></ul>
+          <p id="qa-empty" class="muted small hidden">No QA flags raised.</p>
+          <div id="qa-blocking-reasons"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviewer actions. Approval is review-state only — does NOT
+         re-run redaction or alter the QA gate. The export folder already
+         exists on disk if the gate let it through. -->
+    <div class="card review-actions-card">
+      <div class="card-header">
+        <h3>Reviewer actions</h3>
+        <details class="help-tip">
+          <summary>What does approval do?</summary>
+          <p class="small">
+            Marking a report <strong>approved</strong> updates the in-memory
+            review state only. CARE never re-runs redaction or unblocks an
+            export the QA gate refused — you can still mark a report
+            rejected after the gate let it through, or reject something the
+            gate blocked. To regenerate artifacts, fix the upstream issue
+            (template, OCR, PII chain) and start a new processing run.
+          </p>
+        </details>
+      </div>
+      <form id="review-form" autocomplete="off">
+        <div class="review-form-row">
+          <label for="reviewer-name">Reviewer name</label>
+          <input type="text" id="reviewer-name" name="reviewer"
+                 placeholder="e.g. J. Smith" />
+        </div>
+        <div class="review-form-row">
+          <label for="reviewer-notes">Notes <span class="muted small">(stored with the review record, never written into the redacted artifact)</span></label>
+          <textarea id="reviewer-notes" name="notes" rows="3"
+                    placeholder="Optional: why you approved or rejected this report."></textarea>
+        </div>
+        <div class="review-actions-row">
+          <button type="button" id="approve-btn" class="btn-primary">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="5 12 10 17 19 8"></polyline>
+              </svg>
+            </span>
+            Mark as approved
+          </button>
+          <button type="button" id="open-export-btn" class="btn-secondary">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7 H10 L12 9 H21 V19 H3 Z"></path>
+              </svg>
+            </span>
+            Show exported folder
+          </button>
+          <button type="button" id="reject-btn" class="btn-danger-outline">
+            Reject
+          </button>
+        </div>
       </form>
     </div>
   </section>
 
-  <!-- Export browser ----------------------------------------------------- -->
-  <section id="view-exports" class="view hidden">
-    <h2>Exports</h2>
-    <p class="muted">
-      Lists redacted artifact directories under the configured export_dir.
-      Original PDFs, raw OCR/VLM dumps, and unredacted text are never exposed.
-    </p>
-    <table class="data-table">
+  <!-- =================================================================
+       EXPORT VIEW
+       ================================================================= -->
+  <section id="view-export" class="view hidden">
+    <div class="view-header">
+      <div>
+        <h2>Exported artifacts</h2>
+        <p class="muted small view-subtitle">
+          Read-only listing of the redacted-report folders under the
+          configured <code>export_dir</code>. Original PDFs, raw OCR/VLM
+          dumps, and unredacted text are <strong>never</strong> exposed
+          here — those are filtered server-side by the
+          <code>/api/exports</code> endpoint.
+        </p>
+      </div>
+    </div>
+
+    <details class="help-tip">
+      <summary>What lands in an exported folder?</summary>
+      <ul class="small">
+        <li><code>diagram.redacted.png</code> — pixel-redacted crash diagram crop</li>
+        <li><code>narrative.redacted.txt</code> — placeholder-redacted officer's narrative (plain text)</li>
+        <li><code>narrative.redacted.json</code> — same content with structured PII offsets</li>
+        <li><code>manifest.json</code> — file SHA-256, template id, provider chain, model checksums</li>
+        <li><code>qa.json</code> — QA flags, blocking reasons, confidence scores</li>
+      </ul>
+      <p class="small">
+        These five files are the <em>complete</em> public-safe export
+        surface. Anything else under the report folder is a bug.
+      </p>
+    </details>
+
+    <table class="data-table" id="exports-table">
       <thead>
-        <tr><th>Report</th><th>Files</th></tr>
+        <tr>
+          <th>Report ID</th>
+          <th>Files</th>
+          <th></th>
+        </tr>
       </thead>
       <tbody id="exports-tbody"></tbody>
     </table>
+    <div id="exports-empty" class="empty-state hidden">
+      <p class="muted small">
+        No exported artifacts yet. After a processing run completes, every
+        report whose QA gate passed will appear here.
+      </p>
+    </div>
   </section>
 
-  <!-- Plugins ------------------------------------------------------------ -->
+  <!-- =================================================================
+       DIAGNOSTICS VIEW (was Offline)
+       ================================================================= -->
+  <section id="view-diagnostics" class="view hidden">
+    <div class="view-header">
+      <div>
+        <h2>Diagnostics</h2>
+        <p class="muted small view-subtitle">
+          Health checks an operator can show an auditor. Everything here
+          is read-only and side-effect-free.
+        </p>
+      </div>
+    </div>
+
+    <div class="health-grid">
+      <div class="health-card health-card-unknown" id="health-offline">
+        <div class="health-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="10" width="16" height="10" rx="2"></rect>
+            <path d="M8 10 V7 a4 4 0 0 1 8 0 v3"></path>
+          </svg>
+        </div>
+        <div>
+          <h4>Offline mode</h4>
+          <p class="health-card-status small" id="health-offline-status">Checking…</p>
+        </div>
+      </div>
+
+      <div class="health-card health-card-unknown" id="health-plugins">
+        <div class="health-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 7 V3 m6 4 V3"></path>
+            <rect x="6" y="7" width="12" height="9" rx="2"></rect>
+            <path d="M12 16 v5"></path>
+          </svg>
+        </div>
+        <div>
+          <h4>Plugin chain</h4>
+          <p class="health-card-status small" id="health-plugins-status">Checking…</p>
+        </div>
+      </div>
+
+      <div class="health-card health-card-unknown" id="health-templates">
+        <div class="health-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+            <line x1="4" y1="9" x2="20" y2="9"></line>
+            <line x1="9" y1="4" x2="9" y2="20"></line>
+          </svg>
+        </div>
+        <div>
+          <h4>Templates</h4>
+          <p class="health-card-status small" id="health-templates-status">Checking…</p>
+        </div>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="card-header">
+        <h3>Offline guard detail</h3>
+        <details class="help-tip">
+          <summary>What does the offline guard do?</summary>
+          <p class="small">
+            The <strong>offline guard</strong> patches Python's socket and
+            HTTP layers at startup so any code that tries to open an
+            outbound connection raises <code>OfflineGuardError</code> and
+            never sends a packet. It also sets the Hugging Face / Transformers
+            offline environment variables (<code>HF_HUB_OFFLINE=1</code>,
+            <code>TRANSFORMERS_OFFLINE=1</code>, …) so model libraries
+            don't even attempt to phone home for cached metadata.
+          </p>
+        </details>
+      </div>
+      <pre id="offline-detail" class="result"></pre>
+    </section>
+  </section>
+
+  <!-- =================================================================
+       PLUGINS VIEW
+       ================================================================= -->
   <section id="view-plugins" class="view hidden">
-    <h2>Plugin status</h2>
+    <div class="view-header">
+      <div>
+        <h2>Plugins</h2>
+        <p class="muted small view-subtitle">
+          Every OCR engine, document-AI / VLM model, and PII detector in
+          CARE is a plugin behind a stable interface. Operators choose
+          which plugins are active; nothing is hard-coded into the core
+          pipeline.
+        </p>
+      </div>
+    </div>
+    <details class="help-tip">
+      <summary>How do plugin chains work?</summary>
+      <p class="small">
+        Each section (<code>ocr</code>, <code>document_ai</code>,
+        <code>pii</code>) has a <strong>provider chain</strong> — an
+        ordered list of plugin names. The pipeline runs them in order and
+        merges results. Enabling a plugin both flips its
+        <code>enabled</code> flag and appends it to the chain; disabling
+        does the inverse. Per-provider config (model paths, thresholds,
+        endpoints) lives on the Settings page.
+      </p>
+    </details>
     <div id="plugins-host"></div>
   </section>
 
-  <!-- Offline ------------------------------------------------------------ -->
-  <section id="view-offline" class="view hidden">
-    <h2>Offline verification</h2>
-    <pre id="offline-detail" class="result"></pre>
-  </section>
-
-  <!-- Settings (Phase 13) ------------------------------------------------ -->
+  <!-- =================================================================
+       SETTINGS VIEW
+       ================================================================= -->
   <section id="view-settings" class="view hidden">
-    <h2>Settings</h2>
-    <p class="muted small" id="settings-source"></p>
-    <p class="muted small">
-      Read-only view of the running configuration. Writes will land in
-      the next phase. API-key-shaped fields are redacted server-side
-      and never leave the host. Path strings (model dirs, work dir,
-      etc.) are shown as configured so you can see exactly what the
-      app will read on the next pipeline run.
-    </p>
+    <div class="view-header">
+      <div>
+        <h2>Settings</h2>
+        <p class="muted small view-subtitle" id="settings-source"></p>
+      </div>
+    </div>
+    <details class="help-tip" open>
+      <summary>About this page</summary>
+      <p class="small">
+        The full running configuration is shown below, grouped by section.
+        API-key-shaped fields are redacted server-side and never leave the
+        host. Path strings (model dirs, work dir, etc.) are shown as
+        configured so you can see exactly what the app will read on the
+        next pipeline run. Locked keys (those enforcing offline / privacy
+        guarantees) cannot be changed from any surface — GUI, CLI, or
+        hand-edit.
+      </p>
+    </details>
     <div id="settings-restart-banner"></div>
     <div id="settings-locked-keys"></div>
     <div id="settings-secrets"></div>
     <div id="settings-host"></div>
   </section>
 
-  <!-- Template builder (Phase 8) ----------------------------------------- -->
-  <section id="view-template-builder" class="view hidden">
-    <h2>Template builder</h2>
-    <p class="muted small">
-      Build a template by drawing diagram and narrative regions on a
-      sample report. Source PDFs are rendered into the configured
-      <code>work_dir</code> only and are never copied to the public
-      export directory. Saved templates are validated before any bytes
-      hit disk; existing files cannot be overwritten without explicit
-      <code>force=true</code>.
-    </p>
+  <!-- =================================================================
+       TEMPLATE BUILDER VIEW (unchanged structure for builder.js)
+       ================================================================= -->
+  <section id="view-templates" class="view hidden">
+    <div class="view-header">
+      <div>
+        <h2>Template builder</h2>
+        <p class="muted small view-subtitle">
+          Author a state-and-version-specific template by drawing diagram
+          and narrative regions on a sample report. Source PDFs are
+          rendered into the configured <code>work_dir</code> only and are
+          never copied to the public export directory. Saved templates are
+          schema-validated before any bytes hit disk; existing files
+          cannot be overwritten without explicit <code>force=true</code>.
+        </p>
+      </div>
+    </div>
 
     <div class="card">
-      <h3>1. Load source PDF</h3>
+      <div class="card-header">
+        <h3>1. Load source PDF</h3>
+        <details class="help-tip">
+          <summary>What kind of file should I use?</summary>
+          <p class="small">
+            A representative blank or synthetic-data sample of the form
+            you're targeting (e.g. one filled-in example of a state's
+            CR-3-equivalent crash report). Do <strong>not</strong> load
+            real reports with PII — the builder renders pages to the work
+            directory for visual inspection. Use the same template across
+            all reports of that state-and-version.
+          </p>
+        </details>
+      </div>
       <form id="builder-source-form">
         <label for="builder-source-path">Absolute path on this host</label>
         <input type="text" id="builder-source-path" name="path"
                placeholder="/abs/path/to/sample.pdf" required />
         <div class="row">
-          <button type="submit">Load</button>
-          <button type="button" id="builder-release-btn" disabled>Release session</button>
+          <button type="submit" class="btn-primary">Load</button>
+          <button type="button" id="builder-release-btn" class="btn-secondary" disabled>
+            Release session
+          </button>
         </div>
       </form>
       <p class="muted small" id="builder-source-status"></p>
     </div>
 
     <div class="card hidden" id="builder-canvas-card">
-      <h3>2. Draw regions / mark identifiers</h3>
-      <p class="muted small">
-        <strong>Identifier words</strong> fingerprint the form so the
-        pipeline can pick this template (e.g. <em>"Crash Report",
-        "MOSERS"</em>). They are different from the
-        <strong>narrative start/end anchors</strong> on the right, which
-        bound where the narrative paragraph begins and ends inside its
-        page region.
-      </p>
+      <div class="card-header">
+        <h3>2. Mark identifiers and draw regions</h3>
+        <details class="help-tip">
+          <summary>What's the difference between identifiers and anchors?</summary>
+          <p class="small">
+            <strong>Identifier words</strong> fingerprint the form so the
+            pipeline can pick this template (e.g. <em>"Crash Report",
+            "MOSERS"</em>). They must appear on <em>every</em> instance of
+            this form.
+            <strong>Narrative start/end anchors</strong> bound where the
+            narrative paragraph begins and ends inside its page region —
+            they are extraction guides, not template identifiers.
+          </p>
+        </details>
+      </div>
       <div class="row">
         <button type="button" data-mode="anchor" class="builder-mode active">Mark identifier word</button>
-        <button type="button" data-mode="diagram" class="builder-mode">Mark diagram region</button>
+        <button type="button" data-mode="diagram" class="builder-mode">Mark crash-diagram region</button>
         <button type="button" data-mode="narrative" class="builder-mode">Mark narrative region</button>
       </div>
       <div class="row builder-status-row">
@@ -231,9 +706,9 @@
         <span id="builder-anchor-status" class="builder-anchor-status"></span>
       </div>
       <div class="row" style="margin-top:0.5rem;">
-        <button type="button" id="builder-page-prev">&larr; Prev</button>
+        <button type="button" id="builder-page-prev" class="btn-secondary">&larr; Prev</button>
         <span id="builder-page-status">page —</span>
-        <button type="button" id="builder-page-next">Next &rarr;</button>
+        <button type="button" id="builder-page-next" class="btn-secondary">Next &rarr;</button>
       </div>
       <p class="muted small hidden" id="builder-empty-page-notice">
         No native text on this page (image-only or scanned). Use the
@@ -250,17 +725,17 @@
         <div class="row builder-manual-anchor-row">
           <input type="text" id="builder-anchor-input"
                  placeholder="Type an identifier string and press Enter…" />
-          <button type="button" id="builder-anchor-add-btn">Add</button>
+          <button type="button" id="builder-anchor-add-btn" class="btn-secondary">Add</button>
         </div>
       </div>
 
       <div class="builder-suggestions-wrap">
         <div class="row" style="align-items:center; gap:0.5rem;">
-          <button type="button" id="builder-suggest-btn">Suggest regions (AI)</button>
+          <button type="button" id="builder-suggest-btn" class="btn-secondary">Suggest regions (AI)</button>
           <span class="muted small" id="builder-suggest-status">
             Optional: ask the LayoutLM plugin (or the offline heuristic
             fallback) to propose diagram and narrative regions.
-            Suggestions never auto-apply — you must accept each one.
+            Suggestions never auto-apply — accept each one explicitly.
           </span>
         </div>
         <ul id="builder-suggestions" class="builder-suggestion-list"></ul>
@@ -269,7 +744,21 @@
 
     <div class="grid">
       <div class="card hidden" id="builder-meta-card">
-        <h3>3. Identify by</h3>
+        <div class="card-header">
+          <h3>3. Identify by</h3>
+          <details class="help-tip">
+            <summary>What goes here?</summary>
+            <p class="small">
+              <code>template_id</code> is a short snake_case slug (e.g.
+              <code>example_state_crash_v1</code>). <code>jurisdiction</code>
+              is the state or agency code. <code>version</code> tracks the
+              form revision. <code>form_number_regex</code> is optional —
+              when present, the detector also matches the form number on
+              the page (e.g. <code>EX-CR-[0-9]+</code>) to disambiguate
+              very similar templates.
+            </p>
+          </details>
+        </div>
         <label for="builder-template-id">template_id <span class="muted small">(lowercase, _, 0-9)</span></label>
         <input type="text" id="builder-template-id" placeholder="example_state_crash_v1" />
         <label for="builder-jurisdiction">jurisdiction</label>
@@ -283,7 +772,20 @@
       </div>
 
       <div class="card hidden" id="builder-regions-card">
-        <h3>4. Regions</h3>
+        <div class="card-header">
+          <h3>4. Regions</h3>
+          <details class="help-tip">
+            <summary>About diagram and narrative regions</summary>
+            <p class="small">
+              The <strong>diagram region</strong> tells the extractor where
+              to crop the bird's-eye scene drawing. The
+              <strong>narrative region</strong> bounds the text block where
+              the narrative paragraph starts and ends. Both are stored as
+              normalized <code>[x0, y0, x1, y1]</code> in the 0..1 range so
+              they are page-size-independent.
+            </p>
+          </details>
+        </div>
         <div id="builder-region-diagram" class="builder-region-block">
           <h4>diagram</h4>
           <pre class="result small" id="builder-diagram-bbox">(none)</pre>
@@ -291,6 +793,11 @@
           <div class="row" id="builder-diagram-pages"></div>
           <details>
             <summary>Advanced: diagram_continuation</summary>
+            <p class="muted small">
+              When the crash diagram spills onto a continuation page (rare
+              but happens on multi-vehicle reports), this lets the
+              extractor pick up the spill if visual density is high enough.
+            </p>
             <label><input type="checkbox" id="builder-dc-enabled" /> enable</label>
             <label><input type="checkbox" id="builder-dc-density" /> require_visual_density</label>
             <label>max_text_density
@@ -324,6 +831,9 @@
           <div class="row" id="builder-narrative-pages"></div>
           <details>
             <summary>Advanced: continuation</summary>
+            <p class="muted small">
+              For long narratives that wrap onto a continuation page.
+            </p>
             <label><input type="checkbox" id="builder-cont-enabled" /> enable</label>
             <label>continuation pages (comma-separated, or "any")</label>
             <input type="text" id="builder-cont-pages" placeholder="1,2 or any" />
@@ -336,6 +846,11 @@
           </details>
           <details>
             <summary>Advanced: shifted_region_search</summary>
+            <p class="muted small">
+              When the narrative box drifts off-position on real submissions
+              (different scanner offset, slight form re-layout), this lets
+              the extractor retry within nearby pages.
+            </p>
             <label><input type="checkbox" id="builder-shift-enabled" /> enable</label>
             <label>min_primary_score
               <input type="text" id="builder-shift-min" value="0.5" />
@@ -348,10 +863,24 @@
     </div>
 
     <div class="card hidden" id="builder-action-card">
-      <h3>5. Preview &amp; save</h3>
+      <div class="card-header">
+        <h3>5. Preview &amp; save</h3>
+        <details class="help-tip">
+          <summary>What does Preview do?</summary>
+          <p class="small">
+            <strong>Preview</strong> runs <code>detect_template</code> on the
+            current draft against the loaded sample and returns the score —
+            so you can confirm the identifiers and regions you picked are
+            specific enough before committing the YAML to disk.
+            <strong>Save</strong> validates against the template schema and
+            writes <code>templates/&lt;jurisdiction&gt;/&lt;template_id&gt;.yaml</code>
+            atomically. Existing files are never overwritten silently.
+          </p>
+        </details>
+      </div>
       <div class="row">
-        <button type="button" id="builder-preview-btn">Preview detection</button>
-        <button type="button" id="builder-save-btn">Save template</button>
+        <button type="button" id="builder-preview-btn" class="btn-secondary">Preview detection</button>
+        <button type="button" id="builder-save-btn" class="btn-primary">Save template</button>
         <label class="muted small" style="display:flex; align-items:center; gap:0.25rem;">
           <input type="checkbox" id="builder-force" /> force overwrite
         </label>
@@ -361,14 +890,171 @@
   </section>
 </main>
 
-<footer>
+<!-- =====================================================================
+     NEW PROCESSING RUN drawer (modal-style, focus-trapped)
+     ===================================================================== -->
+<div id="new-job-drawer" class="drawer hidden" role="dialog"
+     aria-modal="true" aria-labelledby="new-job-title">
+  <div class="drawer-backdrop" data-close-drawer="new-job-drawer"></div>
+  <div class="drawer-panel">
+    <div class="drawer-header">
+      <h2 id="new-job-title">New processing run</h2>
+      <button type="button" class="drawer-close" data-close-drawer="new-job-drawer"
+              aria-label="Close">×</button>
+    </div>
+    <form id="new-job-form" autocomplete="off">
+      <div class="drawer-step">
+        <label for="input-dir">
+          1. Input folder <span class="muted small">(absolute path on this host)</span>
+        </label>
+        <input type="text" id="input-dir" name="input_dir"
+               placeholder="/abs/path/to/crash_reports" required />
+        <p class="field-hint muted small">
+          A folder of <code>.pdf</code>, <code>.png</code>,
+          <code>.jpg</code>, <code>.jpeg</code>, or <code>.tiff</code>
+          files. Subdirectories are scanned recursively. Originals are
+          read-only — CARE never modifies them.
+        </p>
+      </div>
+
+      <div class="drawer-step">
+        <label>2. Template scope</label>
+        <p class="field-hint muted small">
+          Default: <strong>auto-detect</strong> using every installed template.
+          Restrict only when you know which form(s) are in this folder —
+          a tighter allowlist reduces false-positive template matches.
+        </p>
+        <details class="drawer-advanced">
+          <summary>Restrict to jurisdiction or template ids</summary>
+          <p class="field-hint muted small" style="margin: 0.4rem 0.6rem 0.6rem;">
+            Both filters are optional. When both are set, they apply
+            with AND — a template must match the jurisdiction
+            <em>and</em> be in the template-ids list. When neither is
+            set, every installed template is in scope (auto-detect).
+          </p>
+
+          <label for="job-jurisdiction">jurisdiction <span class="muted small">(optional)</span></label>
+          <details class="help-tip">
+            <summary>What is jurisdiction?</summary>
+            <p class="small">
+              <strong>Jurisdiction</strong> is the state, DOT, or
+              law-enforcement agency code declared on the template's
+              <code>jurisdiction:</code> field — typically a state code
+              (<code>texas</code>, <code>missouri</code>,
+              <code>iowa_dot</code>) or a sub-agency abbreviation.
+            </p>
+            <p class="small">
+              <strong>What it matches:</strong> every installed
+              template whose <code>jurisdiction:</code> field equals
+              this value. <em>Coarse filter.</em> If Texas has three
+              revisions of its CR-3 form installed
+              (<code>texas_crash_v1</code>,
+              <code>texas_crash_v2</code>,
+              <code>texas_crash_v3</code>), they <em>all</em> match.
+            </p>
+            <p class="small">
+              <strong>When to use:</strong> the input folder is from
+              one state but a mix of form revisions, or you don't know
+              which revision was used.
+            </p>
+            <p class="small">
+              <strong>Why this exists:</strong> the federal MMUCC
+              standard prescribes the <em>data elements</em> a crash
+              report should capture, but each state designs its own
+              police-crash-report <em>form layout</em>. CARE templates
+              describe layouts, so this filter scopes the search to
+              one state's set of layouts.
+            </p>
+          </details>
+          <input type="text" id="job-jurisdiction" name="jurisdiction"
+                 placeholder="texas" />
+          <p class="field-hint muted small">
+            Single state / agency code. Matches every template whose
+            <code>jurisdiction:</code> field equals this value.
+          </p>
+
+          <label for="job-template-ids">template ids <span class="muted small">(optional, comma-separated)</span></label>
+          <details class="help-tip">
+            <summary>What are template ids?</summary>
+            <p class="small">
+              <strong>Template ids</strong> are the unique slugs for
+              specific form revisions (e.g.
+              <code>texas_crash_v2</code>). Every installed template
+              YAML carries a <code>template_id:</code> field; this
+              filter matches only the listed ids.
+            </p>
+            <p class="small">
+              <strong>What it matches:</strong> only templates whose
+              <code>template_id:</code> field appears in your list.
+              <em>Fine filter.</em> Listing
+              <code>texas_crash_v2</code> excludes
+              <code>texas_crash_v1</code> even though both are Texas
+              templates.
+            </p>
+            <p class="small">
+              <strong>When to use:</strong> a state issued a new
+              revision but legacy reports under the old revision are
+              still arriving, and you want each batch processed under
+              the correct template; <em>or</em> the same agency uses
+              different forms for different report types (e.g. a
+              short-form vs. long-form crash report) and you want to
+              constrain to one.
+            </p>
+            <p class="small">
+              <strong>Naming convention:</strong>
+              <code>&lt;jurisdiction&gt;_&lt;form&gt;_v&lt;n&gt;</code>.
+              The Template builder lowercases and snake-cases ids
+              automatically; comma-separate multiple values here.
+            </p>
+          </details>
+          <input type="text" id="job-template-ids" name="template_ids"
+                 placeholder="texas_crash_v1, texas_crash_v2" />
+          <p class="field-hint muted small">
+            One or more template IDs, comma-separated. Matches only
+            templates whose <code>template_id:</code> field is in this
+            list.
+          </p>
+        </details>
+      </div>
+
+      <div class="drawer-step">
+        <label>3. Confirm</label>
+        <ul class="run-confirmation small">
+          <li>OCR + PII detection chain runs locally; no network calls.</li>
+          <li>Reports the <strong>fail-closed gate</strong> blocks land in
+              <strong>Needs attention</strong> for review.</li>
+          <li>Approved redacted artifacts are written under the configured
+              <code>export_dir</code>.</li>
+        </ul>
+      </div>
+
+      <div class="drawer-actions">
+        <button type="button" class="btn-secondary" data-close-drawer="new-job-drawer">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="6 4 20 12 6 20"></polygon>
+            </svg>
+          </span>
+          Run pipeline
+        </button>
+      </div>
+      <pre id="new-job-result" class="result hidden"></pre>
+    </form>
+  </div>
+</div>
+
+<footer class="app-footer">
   <span class="muted small">
-    care — local-only. No telemetry, no CDN, no external assets.
+    CARE — local-only · no telemetry · no CDN · no external assets ·
+    <a href="#diagnostics" data-view="diagnostics">verify offline</a>
   </span>
 </footer>
 
 <script src="/js/utils.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/qa_glossary.js"></script>
 <script src="/js/plugins.js"></script>
 <script src="/js/settings.js"></script>
 <script src="/js/review.js"></script>

@@ -1,0 +1,25 @@
+# CODEOWNERS for CARE.
+#
+# Lines later in the file take precedence. Any path not matched
+# falls through to the global owner. Owners are auto-requested for
+# review on every PR that touches matching files.
+
+# Global default
+*                                @AhmedAredah
+
+# Policy surface — high-bar review
+/GOVERNANCE.md                   @AhmedAredah
+/scripts/governance_check.py     @AhmedAredah
+/care/core/governance_guard.py   @AhmedAredah
+
+# Security-sensitive surface
+/SECURITY.md                     @AhmedAredah
+/care/core/offline_guard.py      @AhmedAredah
+/care/core/secrets.py            @AhmedAredah
+/care/redaction/                 @AhmedAredah
+/care/pii/                       @AhmedAredah
+
+# Build & packaging
+/build/                          @AhmedAredah
+/.github/workflows/              @AhmedAredah
+/scripts/                        @AhmedAredah

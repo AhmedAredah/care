@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX Toolset 6 source for care MSI (Phase 15.8).
+
+  This MSI variant exists for enterprise / SCCM / Intune deployments
+  where the .exe Inno Setup installer isn't acceptable. It installs
+  per-machine into Program Files; per-user installation is delegated
+  to the .exe variant.
+
+  WebView2 is treated as a documented prerequisite (enterprises
+  typically have the Evergreen runtime via Edge baselines). Embedding
+  a 150 MB redist inside an MSI is not the WiX way; admins can pre-
+  stage WebView2 through SCCM.
+
+  Driven by these wix-build defines:
+    -d Flavour=core | ml
+    -d Version=0.1.0
+    -d BundleDir=..\dist\core\care       (or the ml path)
+
+  Build command (assumes ``wix.exe`` from
+  ``dotnet tool install --global wix``):
+
+    wix build build\care.wxs `
+        -d Flavour=core `
+        -d Version=0.1.0 `
+        -d BundleDir=..\dist\core\care `
+        -ext WixToolset.UI.wixext `
+        -o dist\installers\CARE-0.1.0-core.msi
+
+  Stable ``UpgradeCode`` per flavour: same code across versions = MSI
+  in-place upgrade. ``ProductCode`` auto-regenerates per build.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <?if $(Flavour) = "core" ?>
+    <?define ProductName     = "CARE" ?>
+    <?define ProductDirName  = "CARE" ?>
+    <?define ExeName         = "care" ?>
+    <?define UpgradeCode     = "8B12C9A4-3E7D-4A5F-9E22-7A1F8C66D314" ?>
+  <?elseif $(Flavour) = "ml" ?>
+    <?define ProductName     = "CARE (ML)" ?>
+    <?define ProductDirName  = "CARE-ML" ?>
+    <?define ExeName         = "care-ml" ?>
+    <?define UpgradeCode     = "C7B19A82-4F61-4D7E-AB30-D4F9F1ED4C05" ?>
+  <?else ?>
+    <?error Flavour must be 'core' or 'ml' ?>
+  <?endif ?>
+
+  <Package Name="$(ProductName)"
+           Manufacturer="CARE Project"
+           Version="$(Version)"
+           UpgradeCode="$(UpgradeCode)"
+           InstallerVersion="500"
+           Compressed="yes"
+           Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of $(ProductName) is already installed."
+                  Schedule="afterInstallInitialize" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="..\assets\icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/openCrashExtract/care" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <!-- WebView2 prerequisite check. The Evergreen runtime registers
+         a non-empty version string under one of two keys; if neither
+         is present, fail the install with an actionable error. -->
+    <Property Id="WEBVIEW2_HKLM" Secure="yes">
+      <RegistrySearch Id="WV2_HKLM_x64"
+                      Root="HKLM"
+                      Key="SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+                      Name="pv"
+                      Type="raw" />
+    </Property>
+    <Property Id="WEBVIEW2_HKCU" Secure="yes">
+      <RegistrySearch Id="WV2_HKCU"
+                      Root="HKCU"
+                      Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+                      Name="pv"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="WEBVIEW2_HKLM OR WEBVIEW2_HKCU OR Installed"
+            Message="Microsoft Edge WebView2 Runtime is required. Install it from https://developer.microsoft.com/microsoft-edge/webview2/ before running this installer." />
+
+    <!-- Directory layout:
+           %ProgramFiles%\<ProductDirName>\         the bundle
+           %ProgramMenu%\<ProductName>\             start menu folder -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="$(ProductDirName)" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="$(ProductName)" />
+    </StandardDirectory>
+
+    <!-- Main .exe is its own component so the shortcut can target a
+         stable file id. Everything else in the onedir bundle is
+         slurped by ``<Files Include>`` inside the Feature. -->
+    <Component Id="MainExecutable" Directory="INSTALLFOLDER" Guid="*">
+      <File Id="MainExe"
+            Name="$(ExeName).exe"
+            Source="$(BundleDir)\$(ExeName).exe"
+            KeyPath="yes" />
+    </Component>
+
+    <Component Id="ApplicationShortcut" Directory="ApplicationProgramsFolder" Guid="*">
+      <Shortcut Id="ApplicationStartMenuShortcut"
+                Name="$(ProductName)"
+                Description="$(ProductName)"
+                Target="[INSTALLFOLDER]$(ExeName).exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon" />
+      <RemoveFolder Id="CleanUpShortcutFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKLM"
+                     Key="Software\CARE\$(Flavour)"
+                     Name="installed"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <Feature Id="Main" Title="$(ProductName)" Level="1" Display="expand" AllowAbsent="no">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ApplicationShortcut" />
+      <!-- Auto-harvest the rest of the onedir tree (DLLs, _internal/,
+           frontend/, templates/, assets/, config.example.yaml, ...).
+           The main .exe is excluded since it's already declared as a
+           dedicated component above. -->
+      <Files Include="$(BundleDir)\**"
+             Exclude="$(BundleDir)\$(ExeName).exe"
+             Directory="INSTALLFOLDER" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="..\LICENSE.rtf" Overridable="yes" />
+
+  </Package>
+</Wix>

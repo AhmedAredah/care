@@ -8,7 +8,20 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
+# build/ is now used for hand-authored Windows-build assets (runner.py,
+# .spec, .iss, .ps1). Ignore PyInstaller's working dir (build/work/),
+# the binary WebView2 redist (build/redist/*.exe), and any
+# auto-generated cache, but keep the source files tracked.
+build/work/
+build/redist/*.exe
+build/redist/*.zip
+# Runtime working tree (per-job rendered pages, OCR caches, exports).
+# These are created by `care` at runtime under cwd in dev mode and
+# under user-data dirs in frozen mode. They never belong in git.
+/work/
+/exports/
+/dist/
+/jobs/
 develop-eggs/
 dist/
 downloads/
@@ -216,3 +229,55 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# AI assistant configs — kept locally, never published. Each
+# contributor wires up their own assistant.
+.claude/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.cursor/
+.windsurf/
+.aider*
+.continue/
+
+# care — sidecar secrets file written by the GUI
+# Settings page (Phase 13.6). Never commit cloud LLM API keys.
+secrets.yaml
+secrets.yml
+backend/secrets.yaml
+backend/secrets.yml
+# Timestamped backups of config.yaml created by the GUI on every
+# Settings save (Phase 13.3). The runtime never reads them.
+config.*.bak.yaml
+config.*.bak.yml
+backend/config.*.bak.yaml
+backend/config.*.bak.yml
+
+# Model binaries — operators provide their own local copies; we never
+# ship weights or tokenizer artifacts in git. Only the README
+# placeholders under models/<provider>/<model>/README.md are tracked.
+models/**/*.bin
+models/**/*.safetensors
+models/**/*.onnx
+models/**/*.h5
+models/**/*.tflite
+models/**/*.pt
+models/**/*.pth
+models/**/*.gguf
+models/**/*.ggml
+models/**/*.pkl
+models/**/tokenizer.json
+models/**/spm.model
+models/**/sentencepiece.model
+models/**/vocab.txt
+models/**/vocab.json
+models/**/merges.txt
+models/**/special_tokens_map.json
+models/**/tokenizer_config.json
+models/**/added_tokens.json
+models/**/training_args.bin
+models/**/results.csv
+# Hugging Face / Git LFS triggers — never let LFS auto-engage on
+# downloaded model dirs.
+models/**/.gitattributes

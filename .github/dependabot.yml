@@ -1,0 +1,34 @@
+# Dependabot configuration for CARE.
+#
+# We deliberately keep update cadence weekly (not daily) so reviews
+# stay batched and signal stays high. Security updates are exempt
+# and arrive immediately regardless of cadence.
+
+version: 2
+updates:
+  # Python runtime + ML extras
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      patch-and-minor:
+        update-types:
+          - "patch"
+          - "minor"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"

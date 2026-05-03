@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/AhmedAredah/care/security/advisories/new
+    about: Please do NOT open a public issue for security problems. Use private vulnerability reporting.
+  - name: Question or discussion
+    url: https://github.com/AhmedAredah/care/discussions
+    about: For questions, ideas, and design discussions.

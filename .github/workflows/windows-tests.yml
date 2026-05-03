@@ -1,0 +1,70 @@
+# PR-time Windows test workflow (Phase 15.9).
+#
+# Runs the full pytest suite on Windows in addition to the Linux
+# policy checks. We keep this separate from windows-build.yml
+# because we don't want every PR to spend the wall-clock for a 2 GB
+# ml-flavour PyInstaller bundle. PR builds verify that:
+#   - the Python code runs on Windows,
+#   - frozen-aware path / ACL helpers work on the real OS,
+#   - the PyInstaller spec parses + the build/runner.py imports.
+#
+# A full installer build only runs on tag push (windows-build.yml).
+name: Windows tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: windows-latest
+
+    env:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
+      CARE_OFFLINE: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install runtime deps (core only — ml takes too long for PR)
+        run: uv sync
+
+      - name: Run policy check
+        run: python scripts/governance_check.py
+
+      - name: Run unit tests
+        run: |
+          if (Test-Path tests/unit) {
+            python -m pytest tests/unit -x -q
+          }
+
+      - name: Run policy tests
+        run: |
+          if (Test-Path tests/governance) {
+            python -m pytest tests/governance -x -q
+          }
+
+      - name: Run offline tests
+        run: |
+          if (Test-Path tests/offline) {
+            python -m pytest tests/offline -x -q
+          }
+
+      - name: Smoke-test PyInstaller spec parsing
+        run: |
+          python -c "import ast; ast.parse(open('build/care.spec', encoding='utf-8').read())"
+          python -c "import ast; ast.parse(open('build/runner.py', encoding='utf-8').read())"

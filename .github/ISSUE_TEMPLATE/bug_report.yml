@@ -1,0 +1,86 @@
+name: Bug report
+description: Something in CARE doesn't work the way it should.
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug.
+
+        **Before submitting**: please check that this isn't a security
+        issue. If it could let an attacker leak PII, escape offline
+        mode, or write outside the working dir, see [SECURITY.md](https://github.com/AhmedAredah/care/blob/main/SECURITY.md)
+        for the private-disclosure path instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: CARE version
+      description: Output of `care --version` or the installer file you ran.
+      placeholder: "0.1.0 (core / online)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install method
+      options:
+        - .exe installer (online)
+        - .exe installer (airgap)
+        - .msi installer
+        - From source (uv)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Windows 11 23H2 / Ubuntu 24.04 / macOS 14.5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. Include the exact CLI command or GUI action.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `care app`
+        2. Drop a synthetic fixture from `tests/fixtures/synthetic_reports/` onto the dashboard
+        3. Observe ...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log excerpt
+      description: |
+        From `%LOCALAPPDATA%\CARE\logs\care.log` on Windows or the equivalent on
+        Linux/macOS. **Redact any PII before pasting.** CARE's own log filter
+        should have stripped it, but please double-check.
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Privacy
+      options:
+        - label: I have removed all real PII, file paths containing identifiable data, and any real DOT report content from this issue.
+          required: true

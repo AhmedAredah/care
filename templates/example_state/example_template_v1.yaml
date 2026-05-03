@@ -1,0 +1,24 @@
+template_id: example_state_crash_v1
+jurisdiction: EXAMPLE
+agency: Example DOT
+version: "1.0"
+description: Synthetic example crash report template
+signature:
+  anchor_text:
+    - "Example Crash Report"
+    - "Narrative"
+    - "Diagram"
+  form_number_regex: "EX-CR-[0-9]+"
+layout:
+  page_count_min: 1
+  page_count_max: 3
+regions:
+  diagram:
+    page: 0
+    bbox_norm: [0.05, 0.15, 0.95, 0.55]
+    requires_redaction: true
+  narrative:
+    page: 0
+    anchor_start: "Narrative"
+    anchor_end: "Officer"
+    bbox_norm: [0.05, 0.55, 0.95, 0.85]

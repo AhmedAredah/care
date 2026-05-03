@@ -8,14 +8,20 @@
 #      queries (path injection, command injection, SSRF, prototype
 #      pollution) which are exactly the classes we care about for an
 #      offline document-processing tool.
-#   2. Load Models-as-Data extensions from
-#      .github/codeql/extensions/. We use this to teach CodeQL about
-#      our internal sanitizers (safe_join, normalize_input_path) so
-#      the existing path-injection alerts close at their root cause
-#      instead of being suppressed alert-by-alert.
-#   3. Exclude tests, build artefacts, and frontend vendor paths.
-#      Tests intentionally exercise unsafe paths and CodeQL findings
-#      there are noise; build/ is generated PyInstaller scaffolding.
+#   2. Exclude tests, build artefacts, and tooling caches. Tests
+#      intentionally exercise unsafe inputs to verify rejection;
+#      build/ is PyInstaller / Inno Setup / WiX scaffolding.
+#
+# Sanitizer modeling note:
+#   CodeQL Python's `py/path-injection` query uses a QL class
+#   (`PathSanitizer`) for sanitizers, not a Models-as-Data
+#   extensible predicate. Until that changes upstream, the existing
+#   path-injection alerts on this repo are dismissed via the
+#   code-scanning API with a "won't fix — sanitized by safe_join /
+#   normalize_input_path" rationale (see ./README.md). New code that
+#   adds a path-injection alert should either route the input
+#   through one of those sanitizers or include a justification when
+#   dismissing.
 name: "CARE CodeQL config"
 
 # security-extended is one tier above the default suite. It includes
@@ -49,14 +55,3 @@ paths-ignore:
   - "**/.venv"
   - "**/__pycache__"
   - "**/node_modules"
-
-# Models-as-Data extension packs. Each entry is a path (relative to
-# the repo root) to a directory containing .model.yml files. These
-# files register internal functions as sanitizers / sources / sinks
-# so CodeQL's taint tracking reflects how our code actually works.
-#
-# See .github/codeql/extensions/README is in the parent directory's
-# README.md for the rationale and how to add more.
-packs:
-  python:
-    - ./.github/codeql/extensions

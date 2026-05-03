@@ -63,7 +63,7 @@ ml = [
 # runtime in offline mode (the offline guard rejects cloud providers
 # before any SDK call).
 llm-openai = ["openai>=1.40"]
-llm-anthropic = ["anthropic>=0.30"]
+llm-anthropic = ["anthropic>=0.97.0"]
 llm-gemini = ["google-generativeai>=0.7"]
 
 [project.urls]

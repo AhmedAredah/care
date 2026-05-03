@@ -146,10 +146,11 @@ def test_normalize_input_path_strips_surrounding_quotes(
     out = normalize_input_path(raw)
     # The shape (absolute) of the stripped path must validate.
     assert isinstance(out, Path)
-    # Compare on string form: on Linux, Windows-style paths come back
-    # untranslated unless we mocked the translator.
+    # Compare via pathlib equality — on Windows, Path("/foo/bar")
+    # normalises slashes ('\\foo\\bar'), so a raw string comparison
+    # is platform-dependent and would only hold on POSIX.
     if expected.startswith("/"):
-        assert str(out) == expected
+        assert out == Path(expected)
 
 
 def test_normalize_input_path_does_not_strip_internal_quotes() -> None:

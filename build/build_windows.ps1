@@ -108,10 +108,14 @@ if ($Installers) {
 
     # Make sure the WebView2 redistributables are in place. The Inno
     # script will fail with "missing source file" if they aren't.
+    # fetch_webview2.ps1 has $ErrorActionPreference=Stop, so any real
+    # failure bubbles up as a PowerShell exception under our own
+    # ErrorActionPreference=Stop. We deliberately do NOT check
+    # $LASTEXITCODE here — that variable is only updated by external
+    # native commands; a .ps1 invocation leaves it carrying whatever
+    # the previous external call set (e.g. PyInstaller's exit code),
+    # which produces spurious "WebView2 fetch failed" throws.
     & "$ProjectRoot/build/fetch_webview2.ps1"
-    if ($LASTEXITCODE -ne 0) {
-        throw "WebView2 fetch failed."
-    }
 
     $Flavours = if ($Flavour -eq "both") { @("core", "ml") } else { @($Flavour) }
     foreach ($F in $Flavours) {

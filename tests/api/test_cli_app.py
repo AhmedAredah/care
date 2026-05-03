@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 
@@ -95,13 +95,37 @@ class _FakeProc:
         self.killed = True
 
 
+class _FakeWindowEvents:
+    """Mimics pywebview's ``window.events.shown += handler`` API."""
+    def __init__(self) -> None:
+        self.shown_handlers: list = []
+
+    @property
+    def shown(self):  # noqa: D401 — fake property to mirror pywebview
+        return self
+
+    def __iadd__(self, handler):
+        self.shown_handlers.append(handler)
+        return self
+
+
+class _FakeWindow:
+    def __init__(self, title: str) -> None:
+        self.title = title
+        self.events = _FakeWindowEvents()
+
+
 class _FakeWebview:
     def __init__(self) -> None:
         self.created: list[dict[str, Any]] = []
         self.start_kwargs: dict[str, Any] = {}
+        self.last_window: Optional[_FakeWindow] = None
 
-    def create_window(self, title: str, url: str, **kwargs: Any) -> None:
+    def create_window(self, title: str, url: str, **kwargs: Any):
         self.created.append({"title": title, "url": url, **kwargs})
+        win = _FakeWindow(title)
+        self.last_window = win
+        return win
 
     def start(self, **kwargs: Any) -> None:
         self.start_kwargs = kwargs
@@ -274,3 +298,87 @@ def test_cmd_app_passes_args_through(monkeypatch) -> None:
     assert captured["title"] == "Test Title"
     assert captured["width"] == 1024
     assert captured["height"] == 768
+
+
+# ----- icon plumbing ---------------------------------------------------
+
+
+def test_resolve_app_icon_paths_finds_assets() -> None:
+    """The bundled assets/icon.{ico,png} are present in the repo, so
+    in dev mode the resolver should find both."""
+    ico, png = desktop._resolve_app_icon_paths()
+    assert ico is not None and ico.suffix == ".ico"
+    assert png is not None and png.suffix == ".png"
+    assert ico.exists()
+    assert png.exists()
+
+
+def test_set_windows_app_user_model_id_no_op_off_windows(monkeypatch) -> None:
+    """Outside Windows the helper must be a quiet no-op (no shell32
+    import attempt). Test by forcing a non-Windows platform string."""
+    monkeypatch.setattr(desktop.sys, "platform", "linux")
+    # Should return without raising — nothing else to assert because
+    # the helper has no externally observable effect off Windows.
+    desktop._set_windows_app_user_model_id("test.id")
+
+
+def test_attach_windows_icon_no_op_off_windows(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(desktop.sys, "platform", "linux")
+    fake_ico = tmp_path / "fake.ico"
+    fake_ico.write_bytes(b"")
+    desktop._attach_windows_icon("CARE", fake_ico)
+
+
+def test_run_app_passes_png_icon_to_webview_start(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """When the bundled assets/icon.png exists, run_app must pass it
+    as ``icon=`` to ``webview.start`` so GTK/Qt picks it up. Windows
+    still ignores this kwarg by design — handled separately."""
+    cfg = AppConfig()
+    cfg.paths.work_dir = str(tmp_path / "work")
+
+    fake_proc = _FakeProc()
+    fake_webview = _FakeWebview()
+
+    monkeypatch.setattr(desktop.subprocess, "Popen", lambda *a, **kw: fake_proc)
+    monkeypatch.setattr(desktop, "wait_for_server", lambda *a, **kw: True)
+    monkeypatch.setitem(sys.modules, "webview", fake_webview)
+
+    rc = desktop.run_app(
+        config=cfg, config_path=None, host="127.0.0.1", port=7860,
+    )
+    assert rc == 0
+    icon_kw = fake_webview.start_kwargs.get("icon")
+    # The bundled assets/icon.png in the repo provides this; if the
+    # repo dropped it the test surfaces it.
+    assert icon_kw is not None
+    assert icon_kw.endswith("icon.png")
+
+
+def test_run_app_registers_windows_icon_hook(monkeypatch, tmp_path: Path) -> None:
+    """On Windows, run_app must register a shown-event handler so the
+    title-bar icon is set after the window paints. We force-pretend
+    we're on Windows for this test."""
+    cfg = AppConfig()
+    cfg.paths.work_dir = str(tmp_path / "work")
+
+    fake_proc = _FakeProc()
+    fake_webview = _FakeWebview()
+
+    monkeypatch.setattr(desktop.sys, "platform", "win32")
+    monkeypatch.setattr(desktop.subprocess, "Popen", lambda *a, **kw: fake_proc)
+    monkeypatch.setattr(desktop, "wait_for_server", lambda *a, **kw: True)
+    monkeypatch.setitem(sys.modules, "webview", fake_webview)
+    # Block the actual ctypes call from running by stubbing the helper.
+    monkeypatch.setattr(desktop, "_attach_windows_icon", lambda *a, **kw: None)
+    monkeypatch.setattr(desktop, "_set_windows_app_user_model_id", lambda *a, **kw: None)
+
+    rc = desktop.run_app(
+        config=cfg, config_path=None, host="127.0.0.1", port=7860,
+    )
+    assert rc == 0
+    win = fake_webview.last_window
+    assert win is not None
+    # One shown-handler was registered (the icon-attach lambda).
+    assert len(win.events.shown_handlers) == 1

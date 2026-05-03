@@ -56,6 +56,115 @@ DEFAULT_TITLE = "CARE"
 DEFAULT_WIDTH = 1280
 DEFAULT_HEIGHT = 800
 
+# Stable Windows AppUserModelID. Lets the taskbar group our windows
+# under a CARE-specific identity instead of "python.exe" in dev mode,
+# and pair them with the installed shortcut's icon. Format follows
+# Microsoft's "CompanyName.ProductName" guidance.
+APP_USER_MODEL_ID = "AhmedAredah.CARE"
+
+
+def _resolve_app_icon_paths() -> tuple[Optional[Path], Optional[Path]]:
+    """Return (ico_path, png_path) for the bundled app icon, if any.
+
+    Resolves under ``bundled_resource_root() / "assets"`` which works
+    both in dev (repo root) and frozen builds (sys._MEIPASS). Returns
+    ``None`` for either format that isn't present so callers can
+    branch cleanly.
+    """
+    from ..core.runtime_paths import bundled_resource_root
+
+    base = bundled_resource_root() / "assets"
+    ico = base / "icon.ico"
+    png = base / "icon.png"
+    return (
+        ico if ico.exists() else None,
+        png if png.exists() else None,
+    )
+
+
+def _set_windows_app_user_model_id(app_id: str = APP_USER_MODEL_ID) -> None:
+    """Tell Windows our process belongs to a stable CARE identity.
+
+    Without this call, every pywebview window groups under
+    ``python.exe`` in the taskbar and inherits python.exe's icon
+    (in dev mode). Setting an explicit AppUserModelID makes Windows
+    associate our windows with CARE — which lets the taskbar pair
+    them with the installed shortcut's icon and group them
+    separately from other Python tools.
+
+    Best-effort: silently no-ops on non-Windows or if shell32 is
+    unavailable. Must run BEFORE the first window is created.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except (AttributeError, OSError) as exc:  # pragma: no cover - Windows-only
+        _log.debug("SetCurrentProcessExplicitAppUserModelID failed: %s", exc)
+
+
+def _attach_windows_icon(window_title: str, ico_path: Path) -> None:
+    """Set the title-bar + Alt-Tab icon for the running pywebview window.
+
+    pywebview's ``webview.start(icon=...)`` is honoured only on GTK
+    and Qt backends; on Windows it's a silent no-op. We drive the
+    icon ourselves via Win32 ``LoadImage`` + ``WM_SETICON``.
+
+    In frozen builds the .exe icon set by PyInstaller already wins
+    for the pinned-taskbar slot; this hook is the dev-mode fallback
+    and the title-bar belt-and-suspenders.
+
+    Best-effort: any failure is logged at debug/warning level and
+    does not abort the app.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except ImportError:  # pragma: no cover
+        return
+
+    user32 = ctypes.windll.user32
+
+    # Constants from Winuser.h
+    IMAGE_ICON = 1
+    LR_LOADFROMFILE = 0x00000010
+    LR_DEFAULTSIZE = 0x00000040
+    WM_SETICON = 0x0080
+    ICON_SMALL = 0
+    ICON_BIG = 1
+
+    user32.LoadImageW.restype = wintypes.HANDLE
+    user32.FindWindowW.restype = wintypes.HWND
+    user32.SendMessageW.restype = ctypes.c_long
+
+    hicon = user32.LoadImageW(
+        None,
+        str(ico_path),
+        IMAGE_ICON,
+        0,
+        0,
+        LR_LOADFROMFILE | LR_DEFAULTSIZE,
+    )
+    if not hicon:
+        _log.warning("LoadImageW returned NULL for %s", ico_path)
+        return
+
+    hwnd = user32.FindWindowW(None, window_title)
+    if not hwnd:
+        _log.warning(
+            "FindWindowW could not locate window titled %r — icon not set",
+            window_title,
+        )
+        return
+
+    user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon)
+    user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon)
+    _log.info("attached app icon to HWND 0x%x", hwnd)
+
 
 def find_free_port(preferred: int, host: str = "127.0.0.1") -> int:
     """Return ``preferred`` if it's free, otherwise an OS-assigned port.
@@ -270,18 +379,43 @@ def run_app(
             _log.error("server did not become ready at %s within timeout", base_url)
             return 3
 
-        webview.create_window(
+        # Set the AppUserModelID BEFORE the first window so the
+        # taskbar associates our windows with CARE from the start.
+        _set_windows_app_user_model_id()
+
+        ico_path, png_path = _resolve_app_icon_paths()
+
+        window = webview.create_window(
             title,
             base_url,
             width=width,
             height=height,
             resizable=True,
         )
+
+        # On Windows, drive the title-bar icon via Win32 once the
+        # window is shown (FindWindow needs the HWND to exist).
+        # ``window.events.shown`` fires after the OS paints the
+        # window. Wrap in try/except so a pywebview API change can't
+        # crash the app.
+        if ico_path is not None and sys.platform == "win32" and window is not None:
+            try:
+                window.events.shown += lambda: _attach_windows_icon(title, ico_path)
+            except AttributeError:  # pragma: no cover
+                _log.debug("pywebview Window has no events.shown; skipping icon hook")
+
         # pywebview calls this ``storage_path``; ``private_mode=False``
         # is required for the path to actually persist anything (the
         # default is private/incognito which throws cookies + cache
-        # away on close).
-        webview.start(storage_path=str(user_data_dir), private_mode=False)
+        # away on close). ``icon=`` is honoured only on GTK/Qt — on
+        # Windows it's a no-op (the WM_SETICON hook above handles it).
+        start_kwargs: dict[str, Any] = {
+            "storage_path": str(user_data_dir),
+            "private_mode": False,
+        }
+        if png_path is not None:
+            start_kwargs["icon"] = str(png_path)
+        webview.start(**start_kwargs)
         return 0
     finally:
         server_handle.stop()

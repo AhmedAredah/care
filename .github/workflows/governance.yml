@@ -32,16 +32,16 @@ jobs:
           uv sync
 
       - name: Run policy check
-        run: python scripts/governance_check.py
+        run: uv run python scripts/governance_check.py
 
       - name: Run policy tests
         run: |
           if [ -d tests/governance ]; then
-            python -m pytest tests/governance
+            uv run python -m pytest tests/governance
           fi
 
       - name: Run offline tests
         run: |
           if [ -d tests/offline ]; then
-            python -m pytest tests/offline
+            uv run python -m pytest tests/offline
           fi

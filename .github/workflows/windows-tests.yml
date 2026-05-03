@@ -44,27 +44,27 @@ jobs:
         run: uv sync
 
       - name: Run policy check
-        run: python scripts/governance_check.py
+        run: uv run python scripts/governance_check.py
 
       - name: Run unit tests
         run: |
           if (Test-Path tests/unit) {
-            python -m pytest tests/unit -x -q
+            uv run python -m pytest tests/unit -x -q
           }
 
       - name: Run policy tests
         run: |
           if (Test-Path tests/governance) {
-            python -m pytest tests/governance -x -q
+            uv run python -m pytest tests/governance -x -q
           }
 
       - name: Run offline tests
         run: |
           if (Test-Path tests/offline) {
-            python -m pytest tests/offline -x -q
+            uv run python -m pytest tests/offline -x -q
           }
 
       - name: Smoke-test PyInstaller spec parsing
         run: |
-          python -c "import ast; ast.parse(open('build/care.spec', encoding='utf-8').read())"
-          python -c "import ast; ast.parse(open('build/runner.py', encoding='utf-8').read())"
+          uv run python -c "import ast; ast.parse(open('build/care.spec', encoding='utf-8').read())"
+          uv run python -c "import ast; ast.parse(open('build/runner.py', encoding='utf-8').read())"

@@ -93,9 +93,13 @@ jobs:
 
       - name: Install WiX 6
         run: |
-          dotnet tool install --global wix
-          dotnet tool install --global --add-source "https://api.nuget.org/v3/index.json" wix --version 6.0.0 --ignore-failed-sources
-          # Some hosted runners need this so wix.exe is on PATH for later steps:
+          # build/care.wxs targets the WiX Toolset 6 schema; v7 has
+          # breaking syntax changes. Pin to the 6.* series. Without
+          # the pin, `dotnet tool install --global wix` resolves to
+          # v7.0.0 and then a follow-up v6 install fails because the
+          # tool is already present.
+          dotnet tool install --global wix --version "6.*"
+          # Make wix.exe visible to later steps in this job.
           echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
 
       - name: Build WiX MSI

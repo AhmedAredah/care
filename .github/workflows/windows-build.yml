@@ -101,6 +101,14 @@ jobs:
           dotnet tool install --global wix --version "6.*"
           # Make wix.exe visible to later steps in this job.
           echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+          # Prepend it to *this* step's PATH too so the wix extension
+          # add commands below can resolve wix.exe immediately.
+          $env:PATH = "$env:USERPROFILE\.dotnet\tools;$env:PATH"
+          # WiX 6 modularised the UI, Util, etc. features into separate
+          # extension packages; care.wxs uses WixToolset.UI.wixext.
+          # `wix extension add -g` registers them globally so subsequent
+          # `wix build -ext WixToolset.UI.wixext` calls can resolve them.
+          wix extension add -g WixToolset.UI.wixext/6.0.2
 
       - name: Build WiX MSI
         run: |

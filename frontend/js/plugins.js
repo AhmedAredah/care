@@ -1,23 +1,41 @@
-/* Plugins view rendering — read-only inventory + per-row enable
-   toggle (Phase 13.4).
+/* Plugins view — read-only inventory + per-row Enable / Disable
+   toggle (Phase 13.4) + within-chain reorder.
 
-   Toggle behaviour:
+   Toggle behaviour (unchanged):
    - Enable: set providers.<name>.enabled=true AND append <name> to
      provider_chain when not already present. Pre-flighted via
      POST /api/config/validate so policy violations and Pydantic
      errors surface inline before the PATCH.
    - Disable: set enabled=false AND remove <name> from
      provider_chain. Always allowed.
-   - The button is disabled when a guard would refuse the enable —
-     missing model files, or a network-requiring provider with the
-     offline guard on. The tooltip explains why.
 
-   This page never edits the per-provider config dict beyond the two
-   fields above; deeper edits (model_dir, label_map, api_key) belong
-   to the Settings form in Phase 13.5. */
+   Reorder behaviour (new):
+   - Each in-chain provider gets up / down arrow buttons. A click
+     sends a tiny patch swapping the provider with its neighbour,
+     pre-flighted through the same /api/config/validate gate as
+     enable / disable. Boundaries (first / last) disable the
+     respective arrow.
+   - Order semantics differ per section. The Plugins page surfaces
+     this with section-specific help copy and (for OCR) explicit
+     Primary / Fallback role labels:
+       * OCR        — strict fallback. First non-failing provider
+                      wins; later ones are skipped. Position 0 is the
+                      "primary" extractor.
+       * PII        — every provider runs; results merge. Order only
+                      affects attribution / evidence ordering on
+                      entities multiple detectors flag.
+       * document_ai — every VLM runs; outputs become alternative
+                      sources on each base word. Order = order of
+                      alternative_sources entries in the manifest.
+                      Image redaction never depends on VLM order.
+   - Detection completeness, confidence, and the fail-closed gate
+     are independent of within-chain order; this is documented in
+     the per-section help. */
 
 (function (global) {
   "use strict";
+
+  /* ---------- generic cells ---------------------------------------------- */
 
   function statusCell(value) {
     var u = global.OCEUtils;
@@ -28,18 +46,6 @@
       return u.el("td", null, [u.el("span", { class: "badge badge-bad", text: "no" })]);
     }
     return u.el("td", null, [u.el("span", { class: "muted small", text: "n/a" })]);
-  }
-
-  function chainPositionCell(name, chain, inChain) {
-    var u = global.OCEUtils;
-    if (!inChain) {
-      return u.el("td", null, [u.el("span", { class: "muted small", text: "—" })]);
-    }
-    var idx = (chain || []).indexOf(name);
-    var label = idx >= 0 ? "step " + (idx + 1) : "yes";
-    return u.el("td", null, [
-      u.el("span", { class: "badge badge-ok", text: label }),
-    ]);
   }
 
   function licenseCell(value) {
@@ -55,9 +61,62 @@
     return u.el("td", null, [u.el("span", { class: "muted small", text: "—" })]);
   }
 
-  /* Decide whether enabling this provider is safe to attempt without
-     a deeper config edit. Returns null when OK, otherwise a short
-     human-readable reason. */
+  /* ---------- per-section copy ------------------------------------------ */
+
+  /* Differentiated role label per section. OCR's chain order is a hard
+     priority (first success wins), so the labels are meaningful. PII /
+     VLM order is positional only — we surface a number, not a role. */
+  function chainRoleLabel(sectionKey, position) {
+    if (sectionKey === "ocr") {
+      if (position === 0) return "Primary";
+      return "Fallback " + position;
+    }
+    return "#" + (position + 1);
+  }
+
+  function chainRoleClass(sectionKey, position) {
+    if (sectionKey === "ocr" && position === 0) return "badge-ok";
+    if (sectionKey === "ocr") return "badge-warn";
+    return "badge-ok";
+  }
+
+  function orderHelpFor(sectionKey) {
+    if (sectionKey === "ocr") {
+      return (
+        "Order matters here. The pipeline tries providers top-to-bottom; " +
+        "the first one whose extraction succeeds is the one CARE uses, " +
+        "and later providers are skipped. The first row is the " +
+        "\"Primary\" extractor; the rest are fallbacks for hard exceptions. " +
+        "Order changes do not require a server restart — every new " +
+        "processing run reads the chain fresh."
+      );
+    }
+    if (sectionKey === "pii") {
+      return (
+        "All enabled detectors run on every page and the narrative; " +
+        "results are merged. Reordering does NOT change detection " +
+        "completeness or confidence — those are order-independent. It " +
+        "does change which provider is credited as the primary source " +
+        "on entities multiple detectors flag, and the order of evidence " +
+        "in the manifest's \"sources\" list. Order changes do not " +
+        "require a server restart."
+      );
+    }
+    if (sectionKey === "document_ai") {
+      return (
+        "All enabled VLM / document-AI providers run; each one's output " +
+        "becomes an alternative source on each base word. Reordering " +
+        "changes the order of \"alternative_sources\" entries in the " +
+        "report manifest. It does not affect image redaction — the " +
+        "redactor only uses base (non-generative) word bboxes, never " +
+        "VLM-only text. Order changes do not require a server restart."
+      );
+    }
+    return "";
+  }
+
+  /* ---------- enable / disable (unchanged behaviour) -------------------- */
+
   function enableGuardReason(p) {
     if (p.model_files_present === false) {
       return "Model files missing — fill in model_dir on the Settings page first.";
@@ -68,58 +127,7 @@
     return null;
   }
 
-  function toggleCell(p, sectionKey, chain, refresh) {
-    var u = global.OCEUtils;
-    var td = u.el("td", { class: "plugin-toggle-cell" });
-    var statusEl = u.el("span", { class: "small muted plugin-toggle-status" });
-
-    var btn;
-    if (p.enabled) {
-      btn = u.el("button", {
-        type: "button",
-        class: "plugin-toggle-btn plugin-toggle-disable",
-        text: "Disable",
-      });
-      btn.addEventListener("click", function () {
-        applyToggle({
-          sectionKey: sectionKey,
-          providerName: p.name,
-          enabled: false,
-          chain: chain,
-          btn: btn,
-          statusEl: statusEl,
-          refresh: refresh,
-        });
-      });
-    } else {
-      var reason = enableGuardReason(p);
-      btn = u.el("button", {
-        type: "button",
-        class: "plugin-toggle-btn plugin-toggle-enable",
-        text: "Enable",
-      });
-      if (reason) {
-        btn.disabled = true;
-        btn.title = reason;
-      }
-      btn.addEventListener("click", function () {
-        applyToggle({
-          sectionKey: sectionKey,
-          providerName: p.name,
-          enabled: true,
-          chain: chain,
-          btn: btn,
-          statusEl: statusEl,
-          refresh: refresh,
-        });
-      });
-    }
-    td.appendChild(btn);
-    td.appendChild(statusEl);
-    return td;
-  }
-
-  function buildPatch(sectionKey, providerName, enabled, currentChain) {
+  function buildEnablePatch(sectionKey, providerName, enabled, currentChain) {
     var nextChain = (currentChain || []).slice();
     if (enabled) {
       if (nextChain.indexOf(providerName) === -1) nextChain.push(providerName);
@@ -135,6 +143,17 @@
     return patch;
   }
 
+  function buildReorderPatch(sectionKey, currentChain, fromIdx, toIdx) {
+    var nextChain = (currentChain || []).slice();
+    if (toIdx < 0 || toIdx >= nextChain.length) return null;
+    if (fromIdx === toIdx) return null;
+    var moved = nextChain.splice(fromIdx, 1)[0];
+    nextChain.splice(toIdx, 0, moved);
+    var patch = {};
+    patch[sectionKey] = { provider_chain: nextChain };
+    return patch;
+  }
+
   function describeError(err) {
     if (!err) return "request failed";
     if (typeof err === "string") return err;
@@ -142,21 +161,23 @@
     return JSON.stringify(err);
   }
 
-  function applyToggle(opts) {
-    var u = global.OCEUtils;
+  /* Single point of validate-then-PATCH for both enable/disable AND
+     reorder, so error handling stays consistent. */
+  function applyPatch(opts) {
     var api = global.OCEApi;
     var btn = opts.btn;
     var statusEl = opts.statusEl;
-    var patch = buildPatch(
-      opts.sectionKey, opts.providerName, opts.enabled, opts.chain
-    );
+    var refresh = opts.refresh;
+    var statusBefore = opts.statusBefore || "saving";
+    var statusAfter = opts.statusAfter || "saved";
 
-    btn.disabled = true;
-    statusEl.textContent =
-      (opts.enabled ? "enabling " : "disabling ") + opts.providerName + "…";
-    statusEl.className = "small muted plugin-toggle-status";
+    if (btn) btn.disabled = true;
+    if (statusEl) {
+      statusEl.textContent = statusBefore + "…";
+      statusEl.className = "small muted plugin-toggle-status";
+    }
 
-    api.configValidate(patch)
+    api.configValidate(opts.patch)
       .then(function (validation) {
         if (!validation.ok) {
           var msgs = []
@@ -166,20 +187,156 @@
             }));
           throw new Error(msgs.join(" | ") || "validation failed");
         }
-        return api.configPatch(patch);
+        return api.configPatch(opts.patch);
       })
       .then(function () {
-        statusEl.textContent =
-          opts.enabled ? "enabled" : "disabled";
-        statusEl.className = "small plugin-toggle-status plugin-toggle-ok";
-        if (typeof opts.refresh === "function") opts.refresh();
+        if (statusEl) {
+          statusEl.textContent = statusAfter;
+          statusEl.className = "small plugin-toggle-status plugin-toggle-ok";
+        }
+        if (typeof refresh === "function") refresh();
       })
       .catch(function (err) {
-        statusEl.textContent = "error: " + describeError(err);
-        statusEl.className = "small plugin-toggle-status plugin-toggle-err";
-        btn.disabled = false;
+        if (statusEl) {
+          statusEl.textContent = "error: " + describeError(err);
+          statusEl.className = "small plugin-toggle-status plugin-toggle-err";
+        }
+        if (btn) btn.disabled = false;
       });
   }
+
+  function toggleCell(p, sectionKey, chain, refresh) {
+    var u = global.OCEUtils;
+    var td = u.el("td", { class: "plugin-toggle-cell" });
+    var statusEl = u.el("span", { class: "small muted plugin-toggle-status" });
+
+    var btn;
+    if (p.enabled) {
+      btn = u.el("button", {
+        type: "button",
+        class: "plugin-toggle-btn plugin-toggle-disable",
+        text: "Disable",
+      });
+      btn.addEventListener("click", function () {
+        applyPatch({
+          patch: buildEnablePatch(sectionKey, p.name, false, chain),
+          btn: btn,
+          statusEl: statusEl,
+          refresh: refresh,
+          statusBefore: "disabling " + p.name,
+          statusAfter: "disabled",
+        });
+      });
+    } else {
+      var reason = enableGuardReason(p);
+      btn = u.el("button", {
+        type: "button",
+        class: "plugin-toggle-btn plugin-toggle-enable",
+        text: "Enable",
+      });
+      if (reason) {
+        btn.disabled = true;
+        btn.title = reason;
+      }
+      btn.addEventListener("click", function () {
+        applyPatch({
+          patch: buildEnablePatch(sectionKey, p.name, true, chain),
+          btn: btn,
+          statusEl: statusEl,
+          refresh: refresh,
+          statusBefore: "enabling " + p.name,
+          statusAfter: "enabled",
+        });
+      });
+    }
+    td.appendChild(btn);
+    td.appendChild(statusEl);
+    return td;
+  }
+
+  /* ---------- chain order cell ----------------------------------------- */
+
+  function chainOrderCell(p, sectionKey, chain, refresh) {
+    var u = global.OCEUtils;
+    var td = u.el("td", { class: "plugin-order-cell" });
+    if (!p.in_active_chain) {
+      td.appendChild(u.el("span", { class: "muted small", text: "—" }));
+      return td;
+    }
+
+    var idx = (chain || []).indexOf(p.name);
+    var label = chainRoleLabel(sectionKey, idx);
+    var badge = u.el("span", {
+      class: "badge " + chainRoleClass(sectionKey, idx),
+      text: label,
+    });
+    td.appendChild(badge);
+
+    var arrowGroup = u.el("span", { class: "plugin-order-arrows" });
+    var statusEl = u.el("span", { class: "small muted plugin-order-status" });
+
+    var upBtn = u.el("button", {
+      type: "button",
+      class: "plugin-order-btn",
+      "aria-label": "Move " + p.name + " up",
+      text: "▲",
+    });
+    var downBtn = u.el("button", {
+      type: "button",
+      class: "plugin-order-btn",
+      "aria-label": "Move " + p.name + " down",
+      text: "▼",
+    });
+
+    if (idx === 0) {
+      upBtn.disabled = true;
+      upBtn.title = "Already at the top of the chain.";
+    } else {
+      upBtn.title = "Move " + p.name + " up — becomes step " + idx +
+        (sectionKey === "ocr" && idx === 1 ? " (Primary)." : ".");
+    }
+
+    if (idx === (chain || []).length - 1) {
+      downBtn.disabled = true;
+      downBtn.title = "Already at the bottom of the chain.";
+    } else {
+      downBtn.title = "Move " + p.name + " down — becomes step " + (idx + 2) + ".";
+    }
+
+    upBtn.addEventListener("click", function () {
+      var patch = buildReorderPatch(sectionKey, chain, idx, idx - 1);
+      if (!patch) return;
+      applyPatch({
+        patch: patch,
+        btn: upBtn,
+        statusEl: statusEl,
+        refresh: refresh,
+        statusBefore: "moving " + p.name + " up",
+        statusAfter: "moved",
+      });
+    });
+
+    downBtn.addEventListener("click", function () {
+      var patch = buildReorderPatch(sectionKey, chain, idx, idx + 1);
+      if (!patch) return;
+      applyPatch({
+        patch: patch,
+        btn: downBtn,
+        statusEl: statusEl,
+        refresh: refresh,
+        statusBefore: "moving " + p.name + " down",
+        statusAfter: "moved",
+      });
+    });
+
+    arrowGroup.appendChild(upBtn);
+    arrowGroup.appendChild(downBtn);
+    td.appendChild(arrowGroup);
+    td.appendChild(statusEl);
+    return td;
+  }
+
+  /* ---------- table render --------------------------------------------- */
 
   function renderTable(host, title, payload, sectionKey, refresh) {
     var u = global.OCEUtils;
@@ -190,7 +347,7 @@
         u.el("th", { text: "Type" }),
         u.el("th", { text: "Default" }),
         u.el("th", { text: "Enabled" }),
-        u.el("th", { text: "In chain" }),
+        u.el("th", { text: "Position / order" }),
         u.el("th", { text: "Model files" }),
         u.el("th", { text: "License" }),
         u.el("th", { text: "Network" }),
@@ -213,7 +370,7 @@
         u.el("td", { text: p.provider_type }),
         u.el("td", { text: p.enabled_by_default ? "yes" : "no" }),
         statusCell(!!p.enabled),
-        chainPositionCell(p.name, chain, !!p.in_active_chain),
+        chainOrderCell(p, sectionKey, chain, refresh),
         statusCell(p.model_files_present),
         licenseCell(!!p.license_review_required),
         u.el("td", { text: p.requires_network ? "yes" : "no" }),
@@ -225,10 +382,14 @@
     table.appendChild(head);
     table.appendChild(tbody);
 
-    var chainText = (chain.length ? chain.join(" → ") : "(empty)") +
+    /* Pretty chain summary at the top, with role labels for OCR. */
+    var chainPieces = chain.map(function (n, i) {
+      return n + " (" + chainRoleLabel(sectionKey, i) + ")";
+    });
+    var chainText = (chainPieces.length ? chainPieces.join(" → ") : "(empty)") +
       (payload.enabled === false ? " (section disabled)" : "");
 
-    var details = u.el("details", { class: "plugins-help" }, [
+    var help = u.el("details", { class: "plugins-help" }, [
       u.el("summary", { text: "What does Enable / Disable do?" }),
       u.el("p", {
         class: "small muted",
@@ -242,6 +403,11 @@
       }),
     ]);
 
+    var orderHelp = u.el("details", { class: "plugins-help" }, [
+      u.el("summary", { text: "What does the chain order mean here?" }),
+      u.el("p", { class: "small muted", text: orderHelpFor(sectionKey) }),
+    ]);
+
     var section = u.el("section", { class: "plugins-section" }, [
       u.el("h3", { text: title }),
       u.el("p", {
@@ -249,7 +415,8 @@
         text: "Active chain: " + chainText,
       }),
       table,
-      details,
+      help,
+      orderHelp,
     ]);
     host.appendChild(section);
   }
@@ -265,7 +432,17 @@
       u.el("span", { class: "badge badge-bad", text: "no" }),
       u.el("span", { text: " missing,  " }),
       u.el("span", { class: "muted small", text: "n/a" }),
-      u.el("span", { text: " not applicable." }),
+      u.el("span", { text: " not applicable. " }),
+      u.el("span", { class: "badge badge-ok", text: "Primary" }),
+      u.el("span", {
+        text: " / ",
+      }),
+      u.el("span", { class: "badge badge-warn", text: "Fallback N" }),
+      u.el("span", {
+        text:
+          " mark OCR chain priority; for PII and document_ai the " +
+          "position number (#1, #2, …) is positional only.",
+      }),
     ]);
     host.appendChild(legend);
 

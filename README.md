@@ -56,7 +56,7 @@ Download the installer for your environment from the [Releases page](https://git
 | `CARE-*-core.msi`              | Enterprise SCCM/Intune deployment, slim. |
 | `CARE-*-ml.msi`                | Enterprise SCCM/Intune deployment, ML. |
 
-All shipping artifacts are signed by the [SignPath Foundation](https://signpath.io/foundation).
+Code signing for Windows binaries is provided free of charge by the [SignPath Foundation](https://signpath.io/foundation), the OSS code-signing program. Enrolment is in progress; the v0.1.0-alpha binaries are unsigned in the meantime. See the [release notes](https://github.com/AhmedAredah/care/releases) for SmartScreen / Mark-of-the-Web handling and SHA-256 verification before installing.
 
 See [`docs/deployment-windows.md`](docs/deployment-windows.md) for the full deployment guide.
 

@@ -230,50 +230,77 @@ def build_banner(icon_master: Image.Image) -> Image.Image:
 def build_social_card(icon_master: Image.Image) -> Image.Image:
     """1280×640 GitHub social-preview card.
 
-    GitHub recommends 1280×640 for OG images. Layout mirrors the
-    README banner — same colours, same underline — but with the icon
-    larger and the wordmark vertically centred so it reads cleanly in
-    Twitter / LinkedIn / Slack link previews.
+    Sized for the og:image consumed by Twitter / LinkedIn / Slack
+    link previews. Layout: icon left, wordmark + amber underline +
+    subtitle + footer line stacked vertically and centred as a single
+    block. Font sizes are tuned so the longest line (the subtitle)
+    fits inside the right gutter without clipping.
     """
     W, H = 1280, 640
     bg = _vertical_gradient((W, H), NAVY_TOP, NAVY)
 
-    icon_size = 360
+    icon_size = 300
     icon = icon_master.resize((icon_size, icon_size), Image.LANCZOS)
     icon_x = 96
     icon_y = (H - icon_size) // 2
     bg.alpha_composite(icon, (icon_x, icon_y))
 
     draw = ImageDraw.Draw(bg)
-    text_x = icon_x + icon_size + 72
+    text_x = icon_x + icon_size + 64
+    right_margin = 64
+    available_w = W - text_x - right_margin
 
-    title_font = ImageFont.truetype(FONT_BOLD, 144)
-    sub_font = ImageFont.truetype(FONT_REG, 44)
-    foot_font = ImageFont.truetype(FONT_REG, 28)
+    title_font = ImageFont.truetype(FONT_BOLD, 132)
+    foot_font = ImageFont.truetype(FONT_REG, 26)
 
-    title_y = 168
+    # Pick the largest subtitle size that still fits in `available_w`.
+    # 33-char string is right at the edge of the gutter at 44pt; step
+    # down until textbbox reports a width that fits.
+    subtitle = "Crash Analysis & Redaction Engine"
+    sub_font: ImageFont.FreeTypeFont = ImageFont.truetype(FONT_REG, 38)
+    for size in (42, 40, 38, 36, 34):
+        candidate = ImageFont.truetype(FONT_REG, size)
+        bbox = draw.textbbox((0, 0), subtitle, font=candidate)
+        if bbox[2] - bbox[0] <= available_w:
+            sub_font = candidate
+            break
+
+    # Measure the full text block first, then position it so the block
+    # is vertically centred within the canvas — keeps the icon and the
+    # wordmark visually balanced.
+    title_bbox = draw.textbbox((0, 0), "CARE", font=title_font)
+    title_h = title_bbox[3] - title_bbox[1]
+    underline_gap = 16
+    underline_h = 12
+    sub_gap = 30
+    sub_bbox = draw.textbbox((0, 0), subtitle, font=sub_font)
+    sub_h = sub_bbox[3] - sub_bbox[1]
+    foot_gap = 28
+    foot_bbox = draw.textbbox(
+        (0, 0),
+        "Offline-first  ·  Fail-closed  ·  Plugin-based",
+        font=foot_font,
+    )
+    foot_h = foot_bbox[3] - foot_bbox[1]
+
+    block_h = title_h + underline_gap + underline_h + sub_gap + sub_h + foot_gap + foot_h
+    title_y = (H - block_h) // 2 - title_bbox[1]
+
     draw.text((text_x, title_y), "CARE", font=title_font, fill=WHITE)
-
-    title_bbox = draw.textbbox((text_x, title_y), "CARE", font=title_font)
-    bar_top = title_bbox[3] + 18
-    bar_bottom = bar_top + 12
-    bar_left = title_bbox[0]
-    bar_right = title_bbox[2]
+    rendered_title_bbox = draw.textbbox((text_x, title_y), "CARE", font=title_font)
+    bar_top = rendered_title_bbox[3] + underline_gap
+    bar_bottom = bar_top + underline_h
     draw.rounded_rectangle(
-        (bar_left, bar_top, bar_right, bar_bottom),
+        (rendered_title_bbox[0], bar_top, rendered_title_bbox[2], bar_bottom),
         radius=6,
         fill=AMBER,
     )
 
-    sub_y = bar_bottom + 32
-    draw.text(
-        (text_x, sub_y),
-        "Crash Analysis & Redaction Engine",
-        font=sub_font,
-        fill=SLATE_300,
-    )
+    sub_y = bar_bottom + sub_gap
+    draw.text((text_x, sub_y), subtitle, font=sub_font, fill=SLATE_300)
+    rendered_sub_bbox = draw.textbbox((text_x, sub_y), subtitle, font=sub_font)
 
-    foot_y = sub_y + 72
+    foot_y = rendered_sub_bbox[3] + foot_gap
     draw.text(
         (text_x, foot_y),
         "Offline-first  ·  Fail-closed  ·  Plugin-based",

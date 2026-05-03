@@ -173,6 +173,8 @@ $body
             -d "Flavour=$F" `
             -d "Version=$Version" `
             -d "BundleDir=$BundleDir" `
+            -d "IconPath=$ProjectRoot\assets\icon.ico" `
+            -d "LicenseRtfPath=$ProjectRoot\LICENSE.rtf" `
             -ext WixToolset.UI.wixext `
             -o $MsiOut
         if ($LASTEXITCODE -ne 0) {

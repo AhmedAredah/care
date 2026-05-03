@@ -62,7 +62,7 @@
 
     <MediaTemplate EmbedCab="yes" />
 
-    <Icon Id="AppIcon" SourceFile="..\assets\icon.ico" />
+    <Icon Id="AppIcon" SourceFile="$(IconPath)" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
     <Property Id="ARPHELPLINK" Value="https://github.com/AhmedAredah/care" />
     <!-- ARPNOMODIFY is already declared by the WixUI_Minimal extension
@@ -131,7 +131,7 @@
     </Feature>
 
     <ui:WixUI Id="WixUI_Minimal" />
-    <WixVariable Id="WixUILicenseRtf" Value="..\LICENSE.rtf" Overridable="yes" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(LicenseRtfPath)" Overridable="yes" />
 
   </Package>
 </Wix>

@@ -127,12 +127,18 @@ jobs:
   sign:
     needs: build
     runs-on: windows-latest
-    # Only sign on tag push or when manually opted in. PR-time builds
-    # produce unsigned artifacts that are useful for smoke testing
-    # without burning the SignPath quota.
+    # Sign only when SignPath enrolment is configured (the org-id
+    # variable is populated) AND we're either on a tag push or
+    # someone explicitly opted in via workflow_dispatch. Without
+    # enrolment the SignPath action would error on every tag push
+    # and block the release job (which 'needs: sign'); until
+    # enrolment completes the release job falls back to the
+    # unsigned artifacts from the build job.
     if: |
-      startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'workflow_dispatch' && inputs.sign)
+      vars.SIGNPATH_ORGANIZATION_ID != '' && (
+        startsWith(github.ref, 'refs/tags/v') ||
+        (github.event_name == 'workflow_dispatch' && inputs.sign)
+      )
     strategy:
       matrix:
         flavour: [core, ml]
@@ -168,30 +174,56 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: sign
+    # Don't 'needs: sign' — that job is conditional on SignPath
+    # enrolment, and a skipped job is treated as success-with-noop
+    # but its artifacts won't exist. We always need 'build', and we
+    # try the signed artifacts first, then fall back to unsigned.
+    needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download signed core artifacts
+      - name: Download signed core artifacts (if signing enabled)
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
         uses: actions/download-artifact@v4
         with:
           name: signed-core
           path: release-assets
 
-      - name: Download signed ml artifacts
+      - name: Download signed ml artifacts (if signing enabled)
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
         uses: actions/download-artifact@v4
         with:
           name: signed-ml
           path: release-assets
 
+      - name: Download unsigned core artifacts (fallback)
+        if: vars.SIGNPATH_ORGANIZATION_ID == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: unsigned-core
+          path: release-assets
+
+      - name: Download unsigned ml artifacts (fallback)
+        if: vars.SIGNPATH_ORGANIZATION_ID == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: unsigned-ml
+          path: release-assets
+
       - name: Generate release notes
+        env:
+          SIGNED: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
         run: |
           echo "## care ${{ github.ref_name }}" > NOTES.md
           echo "" >> NOTES.md
-          echo "Signed by [SignPath Foundation](https://signpath.io/foundation)." >> NOTES.md
+          if [ "$SIGNED" = "true" ]; then
+            echo "Signed by [SignPath Foundation](https://signpath.io/foundation)." >> NOTES.md
+          else
+            echo "> ⚠️ **Unsigned binaries.** SignPath Foundation enrolment is in progress; until then Windows SmartScreen will warn on first launch. Right-click the downloaded file → Properties → tick **Unblock** → OK; or click **More info → Run anyway** in the SmartScreen dialog. Verify SHA-256 against the table at the bottom of these notes before unblocking." >> NOTES.md
+          fi
           echo "" >> NOTES.md
           echo "### Variants" >> NOTES.md
           echo "" >> NOTES.md
@@ -203,6 +235,12 @@ jobs:
           echo "| CARE-*-ml-airgap-Setup.exe   | ML   | Airgap | ml + offline WebView2 |" >> NOTES.md
           echo "| CARE-*-core.msi              | Core | Prerequisite | SCCM/Intune; admins pre-stage WebView2 |" >> NOTES.md
           echo "| CARE-*-ml.msi                | ML   | Prerequisite | SCCM/Intune (ML) |" >> NOTES.md
+          echo "" >> NOTES.md
+          echo "### SHA-256" >> NOTES.md
+          echo "" >> NOTES.md
+          echo "\`\`\`" >> NOTES.md
+          (cd release-assets && sha256sum *) >> NOTES.md
+          echo "\`\`\`" >> NOTES.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -210,4 +248,4 @@ jobs:
           files: release-assets/*
           body_path: NOTES.md
           draft: true
-          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}

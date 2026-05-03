@@ -99,16 +99,11 @@
       <Directory Id="ApplicationProgramsFolder" Name="$(ProductName)" />
     </StandardDirectory>
 
-    <!-- Main .exe is its own component so the shortcut can target a
-         stable file id. Everything else in the onedir bundle is
-         slurped by ``<Files Include>`` inside the Feature. -->
-    <Component Id="MainExecutable" Directory="INSTALLFOLDER" Guid="*">
-      <File Id="MainExe"
-            Name="$(ExeName).exe"
-            Source="$(BundleDir)\$(ExeName).exe"
-            KeyPath="yes" />
-    </Component>
-
+    <!-- The shortcut targets the exe by path ("[INSTALLFOLDER]care.exe")
+         rather than by File Id, so we do not need a dedicated
+         component for the main exe. The whole onedir bundle, .exe
+         included, is harvested by the <Files Include> element inside
+         the Feature below. -->
     <Component Id="ApplicationShortcut" Directory="ApplicationProgramsFolder" Guid="*">
       <Shortcut Id="ApplicationStartMenuShortcut"
                 Name="$(ProductName)"
@@ -126,16 +121,12 @@
     </Component>
 
     <Feature Id="Main" Title="$(ProductName)" Level="1" Display="expand" AllowAbsent="no">
-      <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="ApplicationShortcut" />
-      <!-- Auto-harvest the rest of the onedir tree (DLLs, _internal/,
-           frontend/, templates/, assets/, config.example.yaml, ...).
-           The main .exe is excluded via the MSBuild ";!" negation
-           prefix because it's already declared as the MainExecutable
-           component above; including it twice would produce a
-           duplicate-File error. -->
-      <Files Include="$(BundleDir)\**;!$(BundleDir)\$(ExeName).exe"
-             Directory="INSTALLFOLDER" />
+      <!-- Auto-harvest the entire onedir tree: care.exe plus _internal/,
+           frontend/, templates/, assets/, config.example.yaml, ...
+           WiX 6 generates one auto-component per file with a stable
+           GUID and the file as KeyPath. -->
+      <Files Include="$(BundleDir)\**" Directory="INSTALLFOLDER" />
     </Feature>
 
     <ui:WixUI Id="WixUI_Minimal" />

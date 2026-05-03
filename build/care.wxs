@@ -130,10 +130,11 @@
       <ComponentRef Id="ApplicationShortcut" />
       <!-- Auto-harvest the rest of the onedir tree (DLLs, _internal/,
            frontend/, templates/, assets/, config.example.yaml, ...).
-           The main .exe is excluded since it's already declared as a
-           dedicated component above. -->
-      <Files Include="$(BundleDir)\**"
-             Exclude="$(BundleDir)\$(ExeName).exe"
+           The main .exe is excluded via the MSBuild ";!" negation
+           prefix because it's already declared as the MainExecutable
+           component above; including it twice would produce a
+           duplicate-File error. -->
+      <Files Include="$(BundleDir)\**;!$(BundleDir)\$(ExeName).exe"
              Directory="INSTALLFOLDER" />
     </Feature>
 

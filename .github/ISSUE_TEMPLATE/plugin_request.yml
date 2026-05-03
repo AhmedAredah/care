@@ -1,0 +1,73 @@
+name: Plugin request
+description: Propose a new OCR / PII / document-AI / LLM provider.
+title: "[Plugin] "
+labels: ["plugin", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Plugins are first-class in CARE. We welcome proposals for
+        new providers, but the bar is high. Please read
+        [`docs/plugin-system.md`](https://github.com/AhmedAredah/care/blob/main/docs/plugin-system.md)
+        and [`docs/license-and-model-governance.md`](https://github.com/AhmedAredah/care/blob/main/docs/license-and-model-governance.md)
+        before opening this issue.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Plugin kind
+      options:
+        - OCR provider
+        - PII provider
+        - Document-AI / VLM provider
+        - LLM provider
+        - PDF backend
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Provider name
+      placeholder: "e.g., easyocr, spacy_ner, donut, claude_haiku"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why this plugin?
+      description: What does it do better than the existing options? On what document types?
+    validations:
+      required: true
+
+  - type: textarea
+    id: licence
+    attributes:
+      label: Licence and governance
+      description: |
+        - What is the licence of the model and the SDK?
+        - Does it need a paid API key?
+        - Can it run fully offline with `local_files_only=True`?
+        - Are there any terms of service that conflict with research use?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: default
+    attributes:
+      label: Should it be enabled by default?
+      options:
+        - "No — operator must opt in"
+        - "Yes — fully offline, MIT/Apache, no licence concerns"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Invariants
+      options:
+        - label: This plugin can run with no internet access (`HF_HUB_OFFLINE=1`, `local_files_only=True`).
+        - label: I'll provide the model checksum manifest in the PR.
+        - label: I understand non-permissive licences will not be enabled by default.

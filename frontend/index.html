@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="referrer" content="no-referrer" />
+<title>care</title>
+<link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+<header>
+  <h1>care</h1>
+  <nav>
+    <a href="#dashboard" data-view="dashboard">Dashboard</a>
+    <a href="#jobs" data-view="jobs">Jobs</a>
+    <a href="#reports" data-view="reports">Reports</a>
+    <a href="#exports" data-view="exports">Exports</a>
+    <a href="#plugins" data-view="plugins">Plugins</a>
+    <a href="#offline" data-view="offline">Offline</a>
+    <a href="#settings" data-view="settings">Settings</a>
+    <a href="#template-builder" data-view="template-builder">Template builder</a>
+  </nav>
+  <div id="offline-badge" class="badge badge-warn" title="offline status unknown">offline?</div>
+</header>
+
+<main id="main">
+  <!-- Dashboard ---------------------------------------------------------- -->
+  <section id="view-dashboard" class="view">
+    <h2>Dashboard</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Submit a job</h3>
+        <p class="muted">Run the local pipeline against a directory of crash report files.</p>
+        <form id="submit-job-form">
+          <label for="input-dir">Input directory (absolute path)</label>
+          <input type="text" id="input-dir" name="input_dir" placeholder="/abs/path/to/inputs" required />
+          <label for="job-jurisdiction">
+            Jurisdiction <span class="muted small">(optional — leave blank to consider all templates)</span>
+          </label>
+          <input type="text" id="job-jurisdiction" name="jurisdiction" placeholder="example_state" />
+          <label for="job-template-ids">
+            Template ids <span class="muted small">(optional, comma-separated — narrows to these template_ids only)</span>
+          </label>
+          <input type="text" id="job-template-ids" name="template_ids" placeholder="example_state_crash_v1, example_state_crash_v2" />
+          <button type="submit">Submit job</button>
+        </form>
+        <pre id="submit-job-result" class="result hidden"></pre>
+      </div>
+      <div class="card">
+        <h3>Counts</h3>
+        <ul id="dashboard-counts">
+          <li>Jobs: <strong data-count="jobs">…</strong></li>
+          <li>Reports: <strong data-count="reports">…</strong></li>
+          <li>Blocked: <strong data-count="blocked">…</strong></li>
+          <li>Approved: <strong data-count="approved">…</strong></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Job list ----------------------------------------------------------- -->
+  <section id="view-jobs" class="view hidden">
+    <h2>Jobs</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Job ID</th>
+          <th>Status</th>
+          <th>Submitted</th>
+          <th>Reports</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="jobs-tbody"></tbody>
+    </table>
+  </section>
+
+  <!-- Report list -------------------------------------------------------- -->
+  <section id="view-reports" class="view hidden">
+    <h2>Reports</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Report</th>
+          <th>Template</th>
+          <th>Decision</th>
+          <th>Review</th>
+          <th>QA flags</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="reports-tbody"></tbody>
+    </table>
+  </section>
+
+  <!-- Report detail ------------------------------------------------------ -->
+  <section id="view-report-detail" class="view hidden">
+    <h2 id="report-detail-title">Report</h2>
+    <div class="grid">
+      <div class="card" id="report-meta-card">
+        <h3>Template result</h3>
+        <dl id="report-meta"></dl>
+      </div>
+      <div class="card" id="report-qa-card">
+        <h3>QA warnings</h3>
+        <ul id="report-qa-flags" class="qa-flags"></ul>
+        <div id="report-blocking-reasons"></div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>Diagram preview (redacted)</h3>
+        <img id="diagram-preview" alt="redacted diagram" />
+        <p class="muted small" id="diagram-status"></p>
+      </div>
+      <div class="card">
+        <h3>Narrative preview (redacted)</h3>
+        <pre id="narrative-text" class="narrative"></pre>
+        <h4>PII highlights</h4>
+        <ul id="pii-highlights" class="pii-list"></ul>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Reviewer actions</h3>
+      <p class="muted small">
+        Approval and rejection update the in-memory review state only.
+        They never bypass the QA gate; if the pipeline blocked the report,
+        approval is disabled until the upstream issue is corrected.
+      </p>
+      <form id="review-form">
+        <label for="reviewer">Reviewer name</label>
+        <input type="text" id="reviewer" name="reviewer" />
+        <label for="review-notes">Notes</label>
+        <textarea id="review-notes" name="notes" rows="3"></textarea>
+        <div class="row">
+          <button type="button" id="approve-btn">Approve</button>
+          <button type="button" id="reject-btn" class="danger">Reject</button>
+        </div>
+        <pre id="review-result" class="result hidden"></pre>
+      </form>
+    </div>
+  </section>
+
+  <!-- Export browser ----------------------------------------------------- -->
+  <section id="view-exports" class="view hidden">
+    <h2>Exports</h2>
+    <p class="muted">
+      Lists redacted artifact directories under the configured export_dir.
+      Original PDFs, raw OCR/VLM dumps, and unredacted text are never exposed.
+    </p>
+    <table class="data-table">
+      <thead>
+        <tr><th>Report</th><th>Files</th></tr>
+      </thead>
+      <tbody id="exports-tbody"></tbody>
+    </table>
+  </section>
+
+  <!-- Plugins ------------------------------------------------------------ -->
+  <section id="view-plugins" class="view hidden">
+    <h2>Plugin status</h2>
+    <div id="plugins-host"></div>
+  </section>
+
+  <!-- Offline ------------------------------------------------------------ -->
+  <section id="view-offline" class="view hidden">
+    <h2>Offline verification</h2>
+    <pre id="offline-detail" class="result"></pre>
+  </section>
+
+  <!-- Settings (Phase 13) ------------------------------------------------ -->
+  <section id="view-settings" class="view hidden">
+    <h2>Settings</h2>
+    <p class="muted small" id="settings-source"></p>
+    <p class="muted small">
+      Read-only view of the running configuration. Writes will land in
+      the next phase. API-key-shaped fields are redacted server-side
+      and never leave the host. Path strings (model dirs, work dir,
+      etc.) are shown as configured so you can see exactly what the
+      app will read on the next pipeline run.
+    </p>
+    <div id="settings-restart-banner"></div>
+    <div id="settings-locked-keys"></div>
+    <div id="settings-secrets"></div>
+    <div id="settings-host"></div>
+  </section>
+
+  <!-- Template builder (Phase 8) ----------------------------------------- -->
+  <section id="view-template-builder" class="view hidden">
+    <h2>Template builder</h2>
+    <p class="muted small">
+      Build a template by drawing diagram and narrative regions on a
+      sample report. Source PDFs are rendered into the configured
+      <code>work_dir</code> only and are never copied to the public
+      export directory. Saved templates are validated before any bytes
+      hit disk; existing files cannot be overwritten without explicit
+      <code>force=true</code>.
+    </p>
+
+    <div class="card">
+      <h3>1. Load source PDF</h3>
+      <form id="builder-source-form">
+        <label for="builder-source-path">Absolute path on this host</label>
+        <input type="text" id="builder-source-path" name="path"
+               placeholder="/abs/path/to/sample.pdf" required />
+        <div class="row">
+          <button type="submit">Load</button>
+          <button type="button" id="builder-release-btn" disabled>Release session</button>
+        </div>
+      </form>
+      <p class="muted small" id="builder-source-status"></p>
+    </div>
+
+    <div class="card hidden" id="builder-canvas-card">
+      <h3>2. Draw regions / mark identifiers</h3>
+      <p class="muted small">
+        <strong>Identifier words</strong> fingerprint the form so the
+        pipeline can pick this template (e.g. <em>"Crash Report",
+        "MOSERS"</em>). They are different from the
+        <strong>narrative start/end anchors</strong> on the right, which
+        bound where the narrative paragraph begins and ends inside its
+        page region.
+      </p>
+      <div class="row">
+        <button type="button" data-mode="anchor" class="builder-mode active">Mark identifier word</button>
+        <button type="button" data-mode="diagram" class="builder-mode">Mark diagram region</button>
+        <button type="button" data-mode="narrative" class="builder-mode">Mark narrative region</button>
+      </div>
+      <div class="row builder-status-row">
+        <span class="muted small" id="builder-mode-hint">Click a word to add it as a form identifier.</span>
+        <span id="builder-anchor-status" class="builder-anchor-status"></span>
+      </div>
+      <div class="row" style="margin-top:0.5rem;">
+        <button type="button" id="builder-page-prev">&larr; Prev</button>
+        <span id="builder-page-status">page —</span>
+        <button type="button" id="builder-page-next">Next &rarr;</button>
+      </div>
+      <p class="muted small hidden" id="builder-empty-page-notice">
+        No native text on this page (image-only or scanned). Use the
+        <strong>manual anchor input</strong> below to type anchor strings
+        instead. Region drawing still works.
+      </p>
+      <div class="builder-canvas-wrapper" id="builder-canvas">
+        <img id="builder-page-img" alt="rendered page" />
+        <div id="builder-overlay"></div>
+      </div>
+      <div class="builder-canvas-anchors-wrap">
+        <div class="muted small">Active form identifiers (click a chip to remove):</div>
+        <ul id="builder-canvas-anchors" class="qa-flags"></ul>
+        <div class="row builder-manual-anchor-row">
+          <input type="text" id="builder-anchor-input"
+                 placeholder="Type an identifier string and press Enter…" />
+          <button type="button" id="builder-anchor-add-btn">Add</button>
+        </div>
+      </div>
+
+      <div class="builder-suggestions-wrap">
+        <div class="row" style="align-items:center; gap:0.5rem;">
+          <button type="button" id="builder-suggest-btn">Suggest regions (AI)</button>
+          <span class="muted small" id="builder-suggest-status">
+            Optional: ask the LayoutLM plugin (or the offline heuristic
+            fallback) to propose diagram and narrative regions.
+            Suggestions never auto-apply — you must accept each one.
+          </span>
+        </div>
+        <ul id="builder-suggestions" class="builder-suggestion-list"></ul>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card hidden" id="builder-meta-card">
+        <h3>3. Identify by</h3>
+        <label for="builder-template-id">template_id <span class="muted small">(lowercase, _, 0-9)</span></label>
+        <input type="text" id="builder-template-id" placeholder="example_state_crash_v1" />
+        <label for="builder-jurisdiction">jurisdiction</label>
+        <input type="text" id="builder-jurisdiction" placeholder="example_state" />
+        <label for="builder-version">version</label>
+        <input type="text" id="builder-version" placeholder="1.0" />
+        <label for="builder-form-regex">form_number_regex (optional)</label>
+        <input type="text" id="builder-form-regex" placeholder="EX-CR-[0-9]+" />
+        <label>Form-identifier strings (click to remove)</label>
+        <ul id="builder-anchors" class="qa-flags"></ul>
+      </div>
+
+      <div class="card hidden" id="builder-regions-card">
+        <h3>4. Regions</h3>
+        <div id="builder-region-diagram" class="builder-region-block">
+          <h4>diagram</h4>
+          <pre class="result small" id="builder-diagram-bbox">(none)</pre>
+          <label>candidate pages</label>
+          <div class="row" id="builder-diagram-pages"></div>
+          <details>
+            <summary>Advanced: diagram_continuation</summary>
+            <label><input type="checkbox" id="builder-dc-enabled" /> enable</label>
+            <label><input type="checkbox" id="builder-dc-density" /> require_visual_density</label>
+            <label>max_text_density
+              <input type="text" id="builder-dc-max" value="0.05" />
+            </label>
+          </details>
+        </div>
+        <hr />
+        <div id="builder-region-narrative" class="builder-region-block">
+          <h4>narrative</h4>
+          <pre class="result small" id="builder-narrative-bbox">(none)</pre>
+          <label for="builder-narr-start">
+            Narrative start anchor
+            <span class="muted small">— first words of the narrative paragraph</span>
+          </label>
+          <div class="row builder-pick-row">
+            <input type="text" id="builder-narr-start" placeholder="Narrative" />
+            <button type="button" class="builder-pickbtn" data-pick="narr-start"
+                    title="Click, then click a word on the page">📌 pick from page</button>
+          </div>
+          <label for="builder-narr-end">
+            Narrative end anchor
+            <span class="muted small">— first words of the section that follows</span>
+          </label>
+          <div class="row builder-pick-row">
+            <input type="text" id="builder-narr-end" placeholder="Officer" />
+            <button type="button" class="builder-pickbtn" data-pick="narr-end"
+                    title="Click, then click a word on the page">📌 pick from page</button>
+          </div>
+          <label>candidate pages</label>
+          <div class="row" id="builder-narrative-pages"></div>
+          <details>
+            <summary>Advanced: continuation</summary>
+            <label><input type="checkbox" id="builder-cont-enabled" /> enable</label>
+            <label>continuation pages (comma-separated, or "any")</label>
+            <input type="text" id="builder-cont-pages" placeholder="1,2 or any" />
+            <label>max_continuation_pages</label>
+            <input type="text" id="builder-cont-max" value="3" />
+            <label>stop_at_next_section_anchor (comma-separated, optional)</label>
+            <input type="text" id="builder-cont-stop" placeholder="Witness Statement" />
+            <label><input type="checkbox" id="builder-cont-require-end" checked />
+              require_review_if_anchor_end_missing</label>
+          </details>
+          <details>
+            <summary>Advanced: shifted_region_search</summary>
+            <label><input type="checkbox" id="builder-shift-enabled" /> enable</label>
+            <label>min_primary_score
+              <input type="text" id="builder-shift-min" value="0.5" />
+            </label>
+            <label><input type="checkbox" id="builder-shift-review" checked />
+              require_review_on_shift</label>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="builder-action-card">
+      <h3>5. Preview &amp; save</h3>
+      <div class="row">
+        <button type="button" id="builder-preview-btn">Preview detection</button>
+        <button type="button" id="builder-save-btn">Save template</button>
+        <label class="muted small" style="display:flex; align-items:center; gap:0.25rem;">
+          <input type="checkbox" id="builder-force" /> force overwrite
+        </label>
+      </div>
+      <pre class="result hidden" id="builder-result"></pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span class="muted small">
+    care — local-only. No telemetry, no CDN, no external assets.
+  </span>
+</footer>
+
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/plugins.js"></script>
+<script src="/js/settings.js"></script>
+<script src="/js/review.js"></script>
+<script src="/js/builder.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

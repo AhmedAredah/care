@@ -1,0 +1,127 @@
+"""Crash-report-specific PII recognizers."""
+from __future__ import annotations
+
+from care.pii.recognizers import (
+    address,
+    case_number,
+    date_of_birth,
+    driver_license,
+    email,
+    insurance_policy,
+    license_plate,
+    medical_info,
+    person_name,
+    phone,
+    report_number,
+    signature,
+    vin,
+)
+
+
+def test_vin_matches_17_chars_no_iqo() -> None:
+    matches = vin.find("VIN: 1HGCM82633A004352 sample")
+    assert len(matches) == 1
+    assert matches[0].text == "1HGCM82633A004352"
+
+
+def test_vin_rejects_strings_with_i_o_q() -> None:
+    # Contains "I" — not a valid VIN char.
+    matches = vin.find("INVALID: I1234567890123456")
+    assert matches == []
+
+
+def test_phone_matches_dash_format() -> None:
+    matches = phone.find("call 555-123-4567 today")
+    assert len(matches) == 1
+    assert matches[0].text == "555-123-4567"
+
+
+def test_phone_matches_paren_format() -> None:
+    matches = phone.find("call (555) 123-4567")
+    assert len(matches) == 1
+
+
+def test_email_basic() -> None:
+    matches = email.find("contact jdoe@example.com")
+    assert len(matches) == 1
+    assert matches[0].text == "jdoe@example.com"
+
+
+def test_address_matches_street_format() -> None:
+    matches = address.find("at 123 Main Street and the corner")
+    assert len(matches) == 1
+    assert "123 Main Street" in matches[0].text
+
+
+def test_dob_label_required() -> None:
+    matches = date_of_birth.find("DOB: 01/02/1990 incident date 03/04/2024")
+    assert len(matches) == 1
+    assert matches[0].text == "01/02/1990"
+
+
+def test_driver_license_label_required() -> None:
+    matches = driver_license.find("Driver's License: ABC1234567")
+    assert len(matches) == 1
+    assert matches[0].text == "ABC1234567"
+
+
+def test_driver_license_no_match_without_label() -> None:
+    assert driver_license.find("ABC1234567 standalone") == []
+
+
+def test_license_plate_label_required() -> None:
+    matches = license_plate.find("Plate: ABC1234")
+    assert len(matches) == 1
+    assert matches[0].text == "ABC1234"
+
+
+def test_insurance_policy_label_required() -> None:
+    matches = insurance_policy.find("Policy: P-1234567")
+    assert len(matches) == 1
+    assert matches[0].text == "P-1234567"
+
+
+def test_report_number_label_required_uppercase_value() -> None:
+    matches = report_number.find("Report number: EX-CR-12345")
+    assert len(matches) == 1
+    assert matches[0].text == "EX-CR-12345"
+
+
+def test_report_number_does_not_falsely_match_form_word() -> None:
+    """Critical fix: ``Report Form`` must NOT capture "Form" as a number."""
+    assert report_number.find("Example Crash Report Form: EX-CR-12345") == []
+
+
+def test_case_number_label_required() -> None:
+    matches = case_number.find("Case #: ABC-12345")
+    assert len(matches) == 1
+    assert matches[0].text == "ABC-12345"
+
+
+def test_person_name_contextual() -> None:
+    matches = person_name.find("Officer Smith arrived first")
+    assert any(m.text == "Smith" for m in matches)
+
+
+def test_person_name_synthetic_jane_doe() -> None:
+    matches = person_name.find("Witness named JANE DOE testified")
+    assert any(m.text.upper().startswith("JANE") for m in matches)
+
+
+def test_person_name_skips_single_letter() -> None:
+    # "Driver A" (single capital letter) must not match — too short.
+    matches = person_name.find("Driver A made an unsafe lane change")
+    assert all(m.text != "A" for m in matches)
+
+
+def test_signature_label_required() -> None:
+    matches = signature.find("Signature: J. Smith")
+    assert len(matches) == 1
+    assert "J. Smith" in matches[0].text
+
+
+def test_medical_info_keywords() -> None:
+    matches = medical_info.find("Driver was transported to hospital due to injury.")
+    types = [m.text.lower() for m in matches]
+    assert "hospital" in types
+    assert "injury" in types

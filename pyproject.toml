@@ -1,0 +1,89 @@
+[project]
+name = "care"
+version = "0.1.0"
+description = "CARE — Crash Analysis & Redaction Engine: privacy-safe extraction of crash diagrams and narratives from police crash report PDFs for open transportation research."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Ahmed Aredah", email = "ahmed.aredah@gmail.com" },
+]
+keywords = [
+    "crash-reports",
+    "transportation-research",
+    "ocr",
+    "pii-redaction",
+    "document-ai",
+    "offline-first",
+    "fastapi",
+    "plugin-architecture",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Text Processing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "fastapi>=0.136.1",
+    "pillow>=12.2.0",
+    "pydantic>=2.13.3",
+    "pypdfium2>=5.7.1",
+    "pyyaml>=6.0.3",
+    # ruamel.yaml is used by the GUI Settings save path so config.yaml
+    # round-trips with comments and ordering preserved (Phase 13.3).
+    # PyYAML stays for the read path (smaller, faster, and used in
+    # places where comments don't matter).
+    "ruamel.yaml>=0.18",
+    # pywebview wraps the FastAPI server in a native desktop window
+    # (Phase 14). Uses the OS's existing webview component — no
+    # bundled Chromium. On Linux, operators may also need to install
+    # system GTK/WebKit packages (see docs/deployment.md). The CLI
+    # surfaces a clear runtime error when those are missing.
+    "pywebview>=5.4",
+    "uvicorn>=0.46.0",
+]
+
+[project.optional-dependencies]
+# Heavy ML deps — opt-in only. Required by the Piiranha PII plugin,
+# the Kosmos-2.5 / LayoutLM document-AI plugins, the hf_local LLM
+# provider, and any other Hugging Face Transformers-backed plugin.
+# Kept out of the base install so the runtime stays slim on
+# deployments that only use the offline-safe regex/Presidio chain.
+ml = [
+    "transformers>=4.40",
+    "torch>=2.4",
+]
+# Cloud LLM SDKs — opt-in only. Each is required only when the
+# matching cloud provider is enabled. None of these are reached at
+# runtime in offline mode (the offline guard rejects cloud providers
+# before any SDK call).
+llm-openai = ["openai>=1.40"]
+llm-anthropic = ["anthropic>=0.30"]
+llm-gemini = ["google-generativeai>=0.7"]
+
+[project.urls]
+Homepage = "https://github.com/AhmedAredah/care"
+Repository = "https://github.com/AhmedAredah/care"
+Issues = "https://github.com/AhmedAredah/care/issues"
+Documentation = "https://github.com/AhmedAredah/care/tree/main/docs"
+
+[project.scripts]
+care = "care.cli.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["care"]
+
+[dependency-groups]
+dev = [
+    "fpdf2>=2.8.7",
+    "pytest>=9.0.3",
+]

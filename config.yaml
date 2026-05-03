@@ -1,0 +1,186 @@
+# care default configuration.
+#
+# Defaults are tuned for the offline demo: mock providers run end-to-end
+# without any local model files. Production deployments should swap the
+# OCR / PII chains for paddleocr / tesseract / presidio after model
+# files are placed under ./models/ (see docs/packaging.md).
+
+offline:
+  enabled: true
+  block_network: true
+  fail_on_network_attempt: true
+
+server:
+  host: 127.0.0.1
+  port: 7860
+  expose_to_network: false
+
+paths:
+  work_dir: ./work
+  export_dir: ./exports
+  templates_dir: ./templates
+  models_dir: ./models
+
+ocr:
+  provider_chain:
+    - mock_ocr
+  providers:
+    mock_ocr:
+      enabled: true
+    noop:
+      enabled: true
+    paddleocr:
+      enabled: false
+      det_model_dir: ./models/ocr/paddleocr/det
+      rec_model_dir: ./models/ocr/paddleocr/rec
+      cls_model_dir: ./models/ocr/paddleocr/cls
+      allow_network: false
+      local_files_only: true
+    tesseract:
+      enabled: false
+      tessdata_dir: ./models/ocr/tesseract/tessdata
+      allow_network: false
+
+document_ai:
+  enabled: false
+  provider_chain: []
+  providers:
+    mock_vlm:
+      enabled: false
+      allow_network: false
+    kosmos25:
+      enabled: false
+      model_dir: ./models/document_ai/kosmos-2.5
+      processor_dir: ./models/document_ai/kosmos-2.5
+      device: auto
+      dtype: bfloat16
+      allow_network: false
+      local_files_only: true
+      tasks:
+        spatial_ocr: true
+        markdown: true
+      requires_review_when_used_for_export: true
+      hallucination_warning: true
+    # LayoutLM (Phase 10) — DISABLED BY DEFAULT. Suggestion-only
+    # plugin: never drives export, never drives PII redaction, always
+    # requires human review. v1 (microsoft/layoutlm-base-uncased) is
+    # MIT-licensed; v3 is CC BY-NC-SA 4.0 (NonCommercial) — review
+    # licensing before enabling on commercial deployments.
+    layoutlm:
+      enabled: false
+      variant: layoutlm-base-uncased
+      model_dir: ./models/document_ai/layoutlm
+      processor_dir: ./models/document_ai/layoutlm
+      device: cpu
+      dtype: float32
+      allow_network: false
+      local_files_only: true
+      region_labels: ["diagram", "narrative", "header", "footer", "table"]
+      requires_review_when_used: true
+
+pii:
+  provider_chain:
+    - regex
+  providers:
+    regex:
+      enabled: true
+    mock_pii:
+      enabled: false
+    presidio:
+      enabled: false
+      model_dir: ./models/pii/presidio
+      allow_network: false
+      local_files_only: true
+    piiranha:
+      enabled: false
+      model_dir: ./models/pii/piiranha
+      allow_network: false
+      local_files_only: true
+      license_warning: "Optional plugin only. Verify license before use."
+    # roberta_ner — Jean-Baptiste/roberta-large-ner-english (MIT).
+    # General English NER for PER/LOC/ORG/MISC. Supplements regex
+    # recognizers for free-text names and locations; regex stays
+    # primary for structured PII (phone, email, SSN, VIN, etc.).
+    # DISABLED by default.
+    roberta_ner:
+      enabled: false
+      model_dir: ./models/pii/roberta-large-ner-english
+      allow_network: false
+      local_files_only: true
+      min_confidence: 0.85
+      aggregation_strategy: simple
+      # Default mapping drops ORG and MISC. Override per deployment:
+      #   label_map:
+      #     ORG: VEHICLE_OWNER_INFO    # redact org names too
+      label_map: {}
+
+llm:
+  # Vendor-agnostic LLM/VLM plugin layer (Phase 12). DISABLED by
+  # default. No provider is enabled out of the box. Cloud providers
+  # additionally require offline.enabled=false; the plugin will refuse
+  # to load otherwise. LLM/VLM output is suggestion-only — every use
+  # forces requires_human_review=true on the QA report.
+  enabled: false
+  provider_chain: []
+  providers:
+    # Cloud providers — DISABLED. Each requires
+    # acknowledged_external_data_egress=true to confirm operators
+    # understand data leaves the local environment.
+    openai:
+      enabled: false
+      api_key: ""
+      model: gpt-4o-mini
+      acknowledged_external_data_egress: false
+    gemini:
+      enabled: false
+      api_key: ""
+      model: gemini-1.5-flash
+      acknowledged_external_data_egress: false
+    anthropic:
+      enabled: false
+      api_key: ""
+      model: claude-haiku-4-5
+      acknowledged_external_data_egress: false
+    # Local-server providers — DISABLED. Loopback enforced by default.
+    ollama:
+      enabled: false
+      endpoint_url: http://127.0.0.1:11434
+      model: llama3.2
+      allow_non_loopback: false
+    vllm:
+      enabled: false
+      endpoint_url: http://127.0.0.1:8000
+      model: ""
+      allow_non_loopback: false
+    llamacpp:
+      enabled: false
+      endpoint_url: http://127.0.0.1:8080
+      model: ""
+      allow_non_loopback: false
+    # Local-files provider — DISABLED. Loads HF transformers from disk.
+    hf_local:
+      enabled: false
+      model_dir: ./models/llm/hf_local
+      local_files_only: true
+      allow_network: false
+    # Mock — for tests only; never enabled in production.
+    mock_llm:
+      enabled: false
+
+template_detection:
+  confidence_threshold: 0.85
+  unknown_template_requires_review: true
+
+review:
+  require_review_for_vlm_generated_output: true
+  require_review_for_low_ocr_confidence: true
+  require_review_for_unmapped_pii: true
+
+export:
+  include_original_pdf: false
+  include_unredacted_text: false
+  include_debug_artifacts: false
+
+logging:
+  redact_pii: true
+  log_raw_pii: false

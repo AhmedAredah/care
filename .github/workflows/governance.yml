@@ -1,0 +1,47 @@
+name: Policy checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+
+    env:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
+      CARE_OFFLINE: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync
+
+      - name: Run policy check
+        run: python scripts/governance_check.py
+
+      - name: Run policy tests
+        run: |
+          if [ -d tests/governance ]; then
+            python -m pytest tests/governance
+          fi
+
+      - name: Run offline tests
+        run: |
+          if [ -d tests/offline ]; then
+            python -m pytest tests/offline
+          fi

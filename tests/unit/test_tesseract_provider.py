@@ -18,6 +18,15 @@ def test_tesseract_refuses_allow_network() -> None:
         TesseractProvider().load({"allow_network": True})
 
 
+def test_tesseract_refuses_local_files_only_false() -> None:
+    """Tesseract used to silently accept ``local_files_only: false``
+    while OnnxTR / PaddleOCR rejected it — a latent inconsistency in
+    the offline contract. The shared assert_offline_config helper on
+    the OCRProvider base now enforces this for every real provider."""
+    with pytest.raises(ConfigError, match="local_files_only"):
+        TesseractProvider().load({"local_files_only": False})
+
+
 def test_tesseract_fails_closed_when_tessdata_missing(tmp_path: Path) -> None:
     with pytest.raises(OfflineGuardError, match="tessdata_dir"):
         TesseractProvider().load({"tessdata_dir": str(tmp_path / "missing")})

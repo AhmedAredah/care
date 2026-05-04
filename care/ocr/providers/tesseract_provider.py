@@ -41,10 +41,7 @@ class TesseractProvider(OCRProvider):
         self._binary: Optional[str] = None
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError(
-                "tesseract.allow_network must be false"
-            )
+        self.assert_offline_config(config)
 
         tessdata = Path(config.get("tessdata_dir") or "")
         if not tessdata or not tessdata.exists():

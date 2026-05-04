@@ -38,7 +38,7 @@ dependencies = [
     # round-trips with comments and ordering preserved (Phase 13.3).
     # PyYAML stays for the read path (smaller, faster, and used in
     # places where comments don't matter).
-    "ruamel.yaml>=0.18",
+    "ruamel.yaml>=0.19.1",
     # pywebview wraps the FastAPI server in a native desktop window
     # (Phase 14). Uses the OS's existing webview component — no
     # bundled Chromium. On Linux, operators may also need to install

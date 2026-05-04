@@ -40,6 +40,7 @@ disabled.**
 | Provider | Default | Generative? | Hallucination risk? | Notes |
 |---|---|---|---|---|
 | `mock_ocr` | n/a | no | no | tests only |
+| `onnxtr` | disabled | no | no | Apache-2.0 (provider) + Apache-2.0 (docTR weights via OnnxTR releases). **Recommended for printed crash-report forms.** Operator-supplied `*.onnx` weights — see `models/ocr/onnxtr/README.md`. |
 | `paddleocr` | disabled | no | no | Apache-2.0; per-language pack license varies |
 | `tesseract` | disabled | no | no | Apache-2.0; per-language `.traineddata` license varies |
 | `regex` (PII) | enabled | no | no | n/a |

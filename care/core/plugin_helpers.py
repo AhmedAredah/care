@@ -10,13 +10,36 @@ multi-layer change. This module owns the *mechanism* (sanitize the
 operator-supplied path, walk the configured directories, look for at
 least one marker) so each base can expose the answer through a single
 classmethod.
+
+It also owns the offline-mode config gate that every real (non-mock)
+plugin's ``load()`` must run as its first line — so the same check
+isn't reimplemented in eight provider modules.
 """
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Optional
 
+from .errors import ConfigError
 from .paths import normalize_input_path
+
+
+def assert_offline_config(provider_name: str, config: dict[str, Any]) -> None:
+    """Reject any provider config that opts into network access.
+
+    Every real plugin runs offline-only by contract: ``allow_network``
+    must be false (default), and ``local_files_only`` must be true
+    (default). Provider ``load()`` methods call this first so the
+    failure surfaces before any model-loading code runs.
+
+    Raises :class:`ConfigError` with ``provider_name`` baked into the
+    message so the operator sees which plugin tripped — invaluable
+    when several providers are stacked in a chain.
+    """
+    if config.get("allow_network", False):
+        raise ConfigError(f"{provider_name}.allow_network must be false")
+    if not config.get("local_files_only", True):
+        raise ConfigError(f"{provider_name}.local_files_only must be true")
 
 _GLOB_CHARS = frozenset("*?[")
 

@@ -39,7 +39,7 @@ class RegexPIIProvider(PIIDetectionProvider):
     requires_network = False
     enabled_by_default = True
 
-    supported_entities = sorted({r.ENTITY_TYPE for r in ALL_RECOGNIZERS})
+    supported_entities = sorted({r.entity_type for r in ALL_RECOGNIZERS})
     supports_offsets = True
     supports_bboxes = False
     supports_confidence = True
@@ -64,14 +64,14 @@ class RegexPIIProvider(PIIDetectionProvider):
             for match in recognizer.find(text):
                 results.append(
                     PIIEntity(
-                        entity_type=recognizer.ENTITY_TYPE,
+                        entity_type=recognizer.entity_type,
                         text=match.text,
                         start_offset=match.start,
                         end_offset=match.end,
                         page_index=page_index,
                         confidence=match.confidence,
                         provider=self.name,
-                        detection_reason=f"{recognizer.DETECTION_REASON}:{scope}",
+                        detection_reason=f"{recognizer.detection_reason}:{scope}",
                         can_map_to_image_coordinates=False,
                         requires_review=False,
                         sources=[self.name],

@@ -12,17 +12,11 @@ from __future__ import annotations
 
 import re
 
-from ._base import Match
-
-ENTITY_TYPE = "VIN"
-DETECTION_REASON = "regex_vin_iso3779"
-DEFAULT_CONFIDENCE = 0.92
-
-PATTERN = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
+from ._base import RegexRecognizer
 
 
 # Letter → numeric value per 49 CFR §565.15. I, O, Q are excluded
-# from the VIN alphabet entirely (already enforced by PATTERN).
+# from the VIN alphabet entirely (already enforced by the pattern).
 _TRANSLITERATE: dict[str, int] = {
     **{c: int(c) for c in "0123456789"},
     "A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6, "G": 7, "H": 8,
@@ -36,19 +30,19 @@ _TRANSLITERATE: dict[str, int] = {
 _WEIGHTS: tuple[int, ...] = (8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2)
 
 
-def _passes_check_digit(vin: str) -> bool:
-    """Apply the mod-11 check digit. Pre-condition: ``vin`` already
-    matches PATTERN (17 chars, alphabet [A-HJ-NPR-Z0-9])."""
-    total = sum(_WEIGHTS[i] * _TRANSLITERATE[vin[i]] for i in range(17))
-    expected = "X" if total % 11 == 10 else str(total % 11)
-    return vin[8] == expected
+class VinRecognizer(RegexRecognizer):
+    entity_type = "VIN"
+    detection_reason = "regex_vin_iso3779"
+    default_confidence = 0.92
+    pattern = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        """Apply the mod-11 check digit. Pre-condition: ``value``
+        already matches the pattern (17 chars, alphabet [A-HJ-NPR-Z0-9])."""
+        total = sum(_WEIGHTS[i] * _TRANSLITERATE[value[i]] for i in range(17))
+        expected = "X" if total % 11 == 10 else str(total % 11)
+        return value[8] == expected
 
 
-def find(text: str) -> list[Match]:
-    out: list[Match] = []
-    for m in PATTERN.finditer(text):
-        candidate = m.group(0)
-        if not _passes_check_digit(candidate):
-            continue
-        out.append(Match(candidate, m.start(), m.end(), DEFAULT_CONFIDENCE))
-    return out
+find = VinRecognizer.find

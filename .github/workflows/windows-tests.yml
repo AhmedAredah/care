@@ -70,6 +70,27 @@ jobs:
             uv run python -m pytest tests/offline -x -q
           }
 
+      - name: Run API tests
+        run: |
+          # Tests under tests/api/ exercise FastAPI routes, the
+          # pywebview desktop wrapper, and the desktop-shortcut
+          # installers. Scoping these to Windows-too is what would
+          # have caught the test_shortcut.py portability bugs at
+          # PR time instead of a year later. Cheap to run.
+          if (Test-Path tests/api) {
+            uv run python -m pytest tests/api -x -q
+          }
+
+      - name: Run integration tests
+        run: |
+          # Integration tests build small synthetic PDFs / images
+          # via fpdf2 + Pillow and run the full pipeline end-to-end
+          # with the mock providers. No real model files needed; no
+          # network. Slower than unit but still seconds, not minutes.
+          if (Test-Path tests/integration) {
+            uv run python -m pytest tests/integration -x -q
+          }
+
       - name: Smoke-test PyInstaller spec parsing
         run: |
           uv run python -c "import ast; ast.parse(open('build/care.spec', encoding='utf-8').read())"

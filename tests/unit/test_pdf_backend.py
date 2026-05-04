@@ -88,6 +88,22 @@ def test_extract_text_layer_returns_words(tmp_path: Path) -> None:
     assert any(w.text == "REPORT" for w in native.words)
 
 
+def test_extract_text_layer_words_carry_unit_confidence(tmp_path: Path) -> None:
+    """Native words come from the document author's own text layer,
+    so every word carries confidence=1.0 by convention. The QA
+    gate's require_review_for_low_ocr_confidence relies on this to
+    reason about native and OCR pages uniformly."""
+    p = make_digital_pdf(
+        tmp_path / "d.pdf",
+        lines=["MOCK CRASH REPORT"],
+    )
+    backend = PypdfiumPDFImageBackend()
+    native = backend.extract_text_layer(p)
+    assert native.words, "expected at least one native word"
+    for w in native.words:
+        assert w.confidence == 1.0, f"native word {w.text!r} has confidence {w.confidence}"
+
+
 def test_extract_text_layer_on_image_returns_empty(tmp_path: Path) -> None:
     p = make_synthetic_image(tmp_path / "scan.png")
     backend = PypdfiumPDFImageBackend()

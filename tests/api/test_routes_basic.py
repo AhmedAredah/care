@@ -6,7 +6,7 @@ from pathlib import Path
 from care.api.routes_health import health
 from care.api.routes_offline import offline_status
 from care.api.routes_plugins import list_plugins
-from care.core.config import AppConfig, PIISection
+from care.core.config import AppConfig, OCRSection, PIISection
 
 
 def test_health_returns_status_ok() -> None:
@@ -172,6 +172,102 @@ def test_list_plugins_enabled_reflects_provider_config_flag() -> None:
     assert by_name["roberta_ner"]["in_active_chain"] is True
     assert by_name["piiranha"]["enabled"] is False
     assert by_name["piiranha"]["in_active_chain"] is False
+
+
+def test_list_plugins_model_files_present_accepts_onnx_only_dir(
+    tmp_path: Path,
+) -> None:
+    """An OnnxTR-style ``model_dir`` containing ``*.onnx`` files but
+    no HuggingFace ``config.json`` must report ``model_files_present
+    = True``. Pre-fix the check insisted on ``config.json`` for any
+    ``model_dir`` and rejected valid ONNX layouts."""
+    onnx_dir = tmp_path / "onnxtr"
+    onnx_dir.mkdir()
+    (onnx_dir / "fast_base.onnx").write_bytes(b"\x00")
+    (onnx_dir / "crnn_vgg16_bn.onnx").write_bytes(b"\x00")
+
+    cfg = AppConfig(
+        ocr=OCRSection(
+            provider_chain=["mock_ocr"],
+            providers={
+                "onnxtr": {
+                    "model_dir": str(onnx_dir),
+                    "det_arch": "fast_base",
+                    "reco_arch": "crnn_vgg16_bn",
+                },
+            },
+        ),
+    )
+    payload = list_plugins(config=cfg)
+    by_name = {p["name"]: p for p in payload["ocr"]["providers"]}
+    assert by_name["onnxtr"]["model_files_present"] is True
+
+
+def test_list_plugins_model_files_present_accepts_paddleocr_layout(
+    tmp_path: Path,
+) -> None:
+    """PaddleOCR drops ``*.pdmodel`` / ``*.pdiparams`` files into its
+    det/rec/cls dirs — no ``config.json`` either."""
+    det = tmp_path / "det"
+    rec = tmp_path / "rec"
+    det.mkdir()
+    rec.mkdir()
+    (det / "inference.pdmodel").write_bytes(b"\x00")
+    (det / "inference.pdiparams").write_bytes(b"\x00")
+    (rec / "inference.pdmodel").write_bytes(b"\x00")
+    (rec / "inference.pdiparams").write_bytes(b"\x00")
+
+    cfg = AppConfig(
+        ocr=OCRSection(
+            provider_chain=["mock_ocr"],
+            providers={
+                "paddleocr": {
+                    "det_model_dir": str(det),
+                    "rec_model_dir": str(rec),
+                },
+            },
+        ),
+    )
+    payload = list_plugins(config=cfg)
+    by_name = {p["name"]: p for p in payload["ocr"]["providers"]}
+    assert by_name["paddleocr"]["model_files_present"] is True
+
+
+def test_list_plugins_model_files_present_accepts_tessdata(tmp_path: Path) -> None:
+    """Tesseract uses ``tessdata_dir`` with ``*.traineddata`` files."""
+    tessdata = tmp_path / "tessdata"
+    tessdata.mkdir()
+    (tessdata / "eng.traineddata").write_bytes(b"\x00")
+
+    cfg = AppConfig(
+        ocr=OCRSection(
+            provider_chain=["mock_ocr"],
+            providers={"tesseract": {"tessdata_dir": str(tessdata)}},
+        ),
+    )
+    payload = list_plugins(config=cfg)
+    by_name = {p["name"]: p for p in payload["ocr"]["providers"]}
+    assert by_name["tesseract"]["model_files_present"] is True
+
+
+def test_list_plugins_model_files_present_rejects_empty_dir(
+    tmp_path: Path,
+) -> None:
+    """A ``model_dir`` that exists but is empty (no ``config.json``,
+    no ``*.onnx``, no ``*.pdmodel``, no ``*.traineddata``) is still
+    'no plausible weights' — must return False."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    cfg = AppConfig(
+        pii=PIISection(
+            provider_chain=["regex"],
+            providers={"piiranha": {"model_dir": str(empty)}},
+        )
+    )
+    payload = list_plugins(config=cfg)
+    by_name = {p["name"]: p for p in payload["pii"]["providers"]}
+    assert by_name["piiranha"]["model_files_present"] is False
 
 
 def test_list_plugins_model_files_present_detects_real_dir(tmp_path: Path) -> None:

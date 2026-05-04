@@ -52,7 +52,7 @@ class BuilderSessionError(CAREError):
 class BuilderWord:
     text: str
     bbox: Optional[list[float]] = None  # image-space pixels at session DPI
-    confidence: Optional[float] = None  # OCR confidence in [0..1]; None for native text
+    confidence: Optional[float] = None  # OCR confidence in [0..1]; 1.0 for native text
 
 
 @dataclass
@@ -202,7 +202,11 @@ class TemplateBuilderStore:
         builder_pages: list[BuilderPage] = []
         for r in rendered:
             words_for_page = [
-                BuilderWord(text=w.text, bbox=list(w.bbox) if w.bbox else None)
+                BuilderWord(
+                    text=w.text,
+                    bbox=list(w.bbox) if w.bbox else None,
+                    confidence=w.confidence,
+                )
                 for w in pages_words[r.page_index]
             ]
             builder_pages.append(

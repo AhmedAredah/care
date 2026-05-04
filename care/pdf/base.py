@@ -43,6 +43,15 @@ class NativeTextWord:
     page_index: int
     text: str
     bbox: Optional[list[float]] = None
+    # Native PDF text comes from the document author's own text layer
+    # (pypdfium2's textpage), so it is treated as ground-truth and
+    # carries confidence=1.0 by convention. Downstream code that
+    # filters on a low-confidence threshold (the QA gate's
+    # ``require_review_for_low_ocr_confidence``) therefore reasons
+    # uniformly across native and OCR pages instead of skipping
+    # native pages entirely. Override at call-sites only when a
+    # provider actually computes a calibrated value.
+    confidence: float = 1.0
 
 
 @dataclass

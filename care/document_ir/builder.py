@@ -20,6 +20,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Iterable, Optional, Union
 
+from .. import __version__ as _CARE_VERSION
 from ..ocr.result import OCRResult
 from ..pdf.base import NativeTextWord
 from .models import DocumentIR, Page, Provenance, Word
@@ -81,6 +82,9 @@ def build_native_page(
     """Construct a single native-text-sourced :class:`Page`.
 
     Mirrors :func:`build_document_ir_from_native_text` for one page.
+    Native text comes from pypdfium2's textpage — the document
+    author's own representation — so words inherit ``confidence=1.0``
+    so the QA gate can reason uniformly across native and OCR pages.
     """
     provenance = Provenance(
         provider="native_pdf",
@@ -92,14 +96,17 @@ def build_native_page(
         if isinstance(item, NativeTextWord):
             text = item.text
             bbox = item.bbox
+            confidence = item.confidence
         else:
             text = str(item)
             bbox = None
+            confidence = 1.0
         out_words.append(
             Word(
                 id=f"p{page_index}_w{j:05d}",
                 text=text,
                 bbox=bbox,
+                confidence=confidence,
                 source="native_pdf",
                 source_provider_type="native_pdf",
                 source_provider_version="pypdfium2",
@@ -136,7 +143,7 @@ def build_document_ir_from_pages(
     provenance: list[Provenance] = [
         Provenance(
             provider="care.pipeline",
-            provider_version="0.2.0",
+            provider_version=_CARE_VERSION,
             provider_type="pipeline",
         )
     ]
@@ -207,7 +214,7 @@ def build_document_ir_from_ocr(
         provenance=[
             Provenance(
                 provider="care.pipeline",
-                provider_version="0.1.0",
+                provider_version=_CARE_VERSION,
                 provider_type="pipeline",
             )
         ],
@@ -244,14 +251,17 @@ def build_document_ir_from_native_text(
             if isinstance(item, NativeTextWord):
                 text = item.text
                 bbox = item.bbox
+                confidence = item.confidence
             else:
                 text = str(item)
                 bbox = None
+                confidence = 1.0
             words.append(
                 Word(
                     id=f"p{i}_w{j:05d}",
                     text=text,
                     bbox=bbox,
+                    confidence=confidence,
                     source="native_pdf",
                     source_provider_type="native_pdf",
                     source_provider_version="pypdfium2",

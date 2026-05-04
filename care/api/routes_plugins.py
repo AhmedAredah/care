@@ -30,6 +30,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends
 
 from ..core.config import AppConfig
+from ..core.paths import normalize_input_path
 from ..document_ai.registry import get_registry as get_vlm_registry
 from ..ocr.registry import get_registry as get_ocr_registry
 from ..pii.registry import get_registry as get_pii_registry
@@ -76,7 +77,15 @@ def _check_model_files_present(provider_cfg: dict[str, Any]) -> Optional[bool]:
     if not candidates:
         return None
     for key, path_str in candidates:
-        path = Path(str(path_str))
+        # normalize_input_path enforces absolute, strips quotes, and
+        # is the project's boundary sanitizer for operator-supplied
+        # filesystem paths (see .github/codeql/README.md). A relative
+        # path here is a misconfiguration — report "not installed"
+        # rather than crash the endpoint.
+        try:
+            path = normalize_input_path(str(path_str))
+        except ValueError:
+            return False
         if not path.exists() or not path.is_dir():
             return False
         if not _model_dir_has_known_weights(path):

@@ -1,16 +1,26 @@
-"""Provider-class helper for ``model_files_present``.
+"""Provider-class helpers in ``care.core.plugin_helpers``.
 
-The helper owns the boundary-sanitized walk over a provider's
-configured model directories. The endpoint just calls
-``cls.model_files_present(provider_cfg)`` — every plugin-format-aware
-piece of logic lives in this helper plus each provider class's
-``MODEL_DIR_KEYS`` / ``WEIGHT_MARKERS`` declarations.
+The module owns two pieces of mechanism every plugin base reuses:
+
+- ``evaluate_model_files_present`` — the boundary-sanitized walk over
+  a provider's configured model directories.
+- ``assert_offline_config`` — the offline-mode config gate that every
+  real plugin's ``load()`` calls as its first line.
+
+Tests below pin both contracts so a future change to the helpers
+can't silently shift plugin-wide behaviour.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from care.core.plugin_helpers import evaluate_model_files_present
+import pytest
+
+from care.core.errors import ConfigError
+from care.core.plugin_helpers import (
+    assert_offline_config,
+    evaluate_model_files_present,
+)
 
 
 def test_returns_none_when_no_model_dir_keys_declared() -> None:
@@ -150,3 +160,52 @@ def test_empty_weight_markers_means_any_directory_counts(tmp_path: Path) -> None
         weight_markers=(),
     )
     assert out is True
+
+
+# ---- assert_offline_config -------------------------------------------------
+
+
+def test_assert_offline_config_accepts_default_offline_config() -> None:
+    """The default config has neither ``allow_network`` nor
+    ``local_files_only`` set — the helper must accept that and assume
+    offline-only mode (the safe default)."""
+    assert_offline_config("anyplugin", {})  # must not raise
+
+
+def test_assert_offline_config_accepts_explicit_offline_values() -> None:
+    """``allow_network=false`` + ``local_files_only=true`` is the
+    legitimate explicit-offline config; must pass."""
+    assert_offline_config(
+        "anyplugin",
+        {"allow_network": False, "local_files_only": True},
+    )
+
+
+def test_assert_offline_config_rejects_allow_network_true() -> None:
+    with pytest.raises(ConfigError, match="someplugin.allow_network"):
+        assert_offline_config("someplugin", {"allow_network": True})
+
+
+def test_assert_offline_config_rejects_local_files_only_false() -> None:
+    with pytest.raises(ConfigError, match="someplugin.local_files_only"):
+        assert_offline_config("someplugin", {"local_files_only": False})
+
+
+def test_assert_offline_config_error_message_includes_provider_name() -> None:
+    """When several providers are stacked in a chain, an offline
+    misconfiguration must surface WHICH provider tripped — that's the
+    only thing the operator can act on."""
+    with pytest.raises(ConfigError) as exc:
+        assert_offline_config("piiranha", {"allow_network": True})
+    assert "piiranha" in str(exc.value)
+
+
+def test_assert_offline_config_checks_allow_network_first() -> None:
+    """If both flags are wrong, the network flag is the more dangerous
+    one — surface it first so the operator's first remediation
+    addresses the root cause."""
+    with pytest.raises(ConfigError, match="allow_network"):
+        assert_offline_config(
+            "anyplugin",
+            {"allow_network": True, "local_files_only": False},
+        )

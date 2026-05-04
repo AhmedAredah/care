@@ -98,10 +98,7 @@ class OnnxTROCRProvider(OCRProvider):
     # ------------------------------------------------------------------
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError("onnxtr.allow_network must be false")
-        if not config.get("local_files_only", True):
-            raise ConfigError("onnxtr.local_files_only must be true")
+        self.assert_offline_config(config)
 
         det_arch = str(config.get("det_arch", "fast_base"))
         reco_arch = str(config.get("reco_arch", "crnn_vgg16_bn"))

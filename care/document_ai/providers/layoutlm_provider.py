@@ -41,17 +41,16 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.constants import HF_OFFLINE_ENV
 from ...core.errors import ConfigError, OfflineGuardError
+from ...core.plugin_helpers import apply_hf_offline_env
 from ...ocr.base import ProviderHealth
 from ..base import DocumentAIProvider
 from ..result import (
-    CandidateRegion,
     DocumentAIResult,
     RegionDetectionResult,
 )
@@ -117,8 +116,8 @@ class LayoutLMProvider(DocumentAIProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._model_dir: Optional[Path] = None
-        self._processor_dir: Optional[Path] = None
+        self._model_dir: Path | None = None
+        self._processor_dir: Path | None = None
         self._variant: str = "layoutlm-base-uncased"
         self._license: str = "unknown"
         self._license_review_required: bool = False
@@ -135,18 +134,12 @@ class LayoutLMProvider(DocumentAIProvider):
         # Reject network-enabling toggles first so we never even peek
         # at the rest of the config when a misconfigured deployment
         # tries to flip the safety switch.
-        if config.get("allow_network", False):
-            raise ConfigError(
-                "layoutlm.allow_network must be false"
-            )
-        if not config.get("local_files_only", True):
-            raise ConfigError("layoutlm.local_files_only must be true")
+        self.assert_offline_config(config)
 
         # Defense in depth: re-apply the HF offline env vars even if
         # the global offline guard already set them. The plugin must
         # never trust that some other layer set the right env.
-        for key, value in HF_OFFLINE_ENV.items():
-            os.environ[key] = value
+        apply_hf_offline_env()
 
         model_dir = Path(config.get("model_dir") or "")
         if not str(model_dir) or not model_dir.exists():

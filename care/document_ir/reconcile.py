@@ -17,8 +17,8 @@ draw bboxes only from base (non-generative) sources.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
 
 from .models import AlternativeSource, DocumentIR, Page, Warning, Word
 
@@ -57,14 +57,11 @@ def reconcile_with_alternatives(
     base_pages_by_index: dict[int, Page] = {p.page_index: p for p in base.pages}
 
     for alt in alternatives:
-        is_vlm = alt.document_ir.pages and any(
-            (page.text_source or "").startswith("vlm") for page in alt.document_ir.pages
-        )
         if alt.generative:
             saw_generative = True
 
         for alt_page in alt.document_ir.pages:
-            base_page: Optional[Page] = base_pages_by_index.get(alt_page.page_index)
+            base_page: Page | None = base_pages_by_index.get(alt_page.page_index)
             if base_page is None:
                 continue
             for alt_word in alt_page.words:
@@ -157,9 +154,9 @@ def reconcile_with_alternatives(
     return ReconciliationResult(document_ir=base, warnings=_dedup_warnings(warnings))
 
 
-def _best_overlapping_word(words: list[Word], target_bbox: list[float]) -> tuple[Optional[Word], float]:
+def _best_overlapping_word(words: list[Word], target_bbox: list[float]) -> tuple[Word | None, float]:
     tx0, ty0, tx1, ty1 = target_bbox
-    best: Optional[Word] = None
+    best: Word | None = None
     best_overlap = 0.0
     for word in words:
         if not word.bbox:
@@ -186,7 +183,7 @@ def _texts_disagree(a: str, b: str) -> bool:
 
 
 def _dedup_warnings(warnings: list[Warning]) -> list[Warning]:
-    seen: set[tuple[str, Optional[int], str]] = set()
+    seen: set[tuple[str, int | None, str]] = set()
     out: list[Warning] = []
     for w in warnings:
         key = (w.code, w.page_index, w.message)

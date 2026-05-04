@@ -13,18 +13,14 @@ callable on Windows; we just can't observe a meaningful x-bit there.
 """
 from __future__ import annotations
 
-import os
-import platform
 import plistlib
 import stat
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
 from care.cli import shortcut
-
 
 _WINDOWS_NO_XBIT = pytest.mark.skipif(
     sys.platform == "win32",

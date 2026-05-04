@@ -286,7 +286,7 @@ def test_patch_config_rejects_pydantic_error(
 def test_patch_config_creates_backup_when_file_existed(
     monkeypatch, tmp_path: Path
 ) -> None:
-    cfg_path = _patch_to_tmp_config(
+    _patch_to_tmp_config(
         monkeypatch, tmp_path, "server:\n  port: 7860\n"
     )
     response = patch_config(
@@ -402,7 +402,6 @@ def test_derive_secret_name_for_unknown_path() -> None:
 
 
 def test_restart_required_returns_unknown_when_snapshot_empty() -> None:
-    from care.api.routes_config import get_restart_required
     from care.core.runtime_state import clear_boot_snapshot
 
     clear_boot_snapshot()
@@ -414,8 +413,6 @@ def test_restart_required_returns_unknown_when_snapshot_empty() -> None:
 
 
 def test_restart_required_false_when_snapshot_matches_disk() -> None:
-    from care.api.routes_config import get_restart_required
-    from care.core.config import ServerConfig
     from care.core.runtime_state import (
         clear_boot_snapshot,
         set_boot_snapshot,
@@ -431,8 +428,6 @@ def test_restart_required_false_when_snapshot_matches_disk() -> None:
 
 
 def test_restart_required_flags_drift_with_specific_paths() -> None:
-    from care.api.routes_config import get_restart_required
-    from care.core.config import ServerConfig
     from care.core.runtime_state import (
         clear_boot_snapshot,
         set_boot_snapshot,

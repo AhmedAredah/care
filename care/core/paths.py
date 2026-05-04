@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Optional
 
 from .config import AppConfig
 
@@ -47,7 +46,7 @@ def _looks_like_windows_path(path_str: str) -> bool:
     return bool(_WINDOWS_DRIVE_RE.match(path_str)) or path_str.startswith("\\\\")
 
 
-def _translate_windows_to_wsl(path_str: str) -> Optional[str]:
+def _translate_windows_to_wsl(path_str: str) -> str | None:
     """Map ``C:\\Users\\X`` to ``/mnt/c/Users/X`` when running under
     WSL/Linux. Returns the translated path only if the result actually
     exists on disk; otherwise returns None so the caller can decide.
@@ -146,7 +145,7 @@ def work_dir(cfg: AppConfig, *, create: bool = True) -> Path:
 
 
 def export_dir(cfg: AppConfig, *, create: bool = True) -> Path:
-    from .runtime_paths import is_frozen, user_documents_root, SUBDIR_EXPORTS
+    from .runtime_paths import SUBDIR_EXPORTS, is_frozen, user_documents_root
 
     raw = Path(cfg.paths.export_dir).expanduser()
     if raw.is_absolute():

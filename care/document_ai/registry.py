@@ -1,22 +1,20 @@
 """Document-AI / VLM provider registry."""
 from __future__ import annotations
 
-from typing import Type
-
 from ..core.errors import PluginNotFoundError
 from .base import DocumentAIProvider
 
 
 class DocumentAIRegistry:
     def __init__(self) -> None:
-        self._providers: dict[str, Type[DocumentAIProvider]] = {}
+        self._providers: dict[str, type[DocumentAIProvider]] = {}
 
-    def register(self, name: str, provider_cls: Type[DocumentAIProvider]) -> None:
+    def register(self, name: str, provider_cls: type[DocumentAIProvider]) -> None:
         if not isinstance(provider_cls, type) or not issubclass(provider_cls, DocumentAIProvider):
             raise TypeError(f"{provider_cls!r} is not a DocumentAIProvider subclass")
         self._providers[name] = provider_cls
 
-    def get(self, name: str) -> Type[DocumentAIProvider]:
+    def get(self, name: str) -> type[DocumentAIProvider]:
         if name not in self._providers:
             raise PluginNotFoundError(
                 f"Document-AI provider '{name}' is not registered. "

@@ -10,9 +10,9 @@ class ReviewDecision:
     reason: str = ""
 
     @classmethod
-    def allow(cls) -> "ReviewDecision":
+    def allow(cls) -> ReviewDecision:
         return cls(decision="ALLOW")
 
     @classmethod
-    def block(cls, reason: str) -> "ReviewDecision":
+    def block(cls, reason: str) -> ReviewDecision:
         return cls(decision="BLOCK", reason=reason)

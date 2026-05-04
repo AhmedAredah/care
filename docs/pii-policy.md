@@ -35,21 +35,28 @@ over-redaction.
 
 ## Provider chain (defaults)
 
-1. `regex` — custom recognizers in `care/pii/recognizers/`
-   (Phase 4).
-2. `presidio` — Microsoft Presidio analyzer with local-only models
-   (Phase 4).
+The shipping default has a single provider:
 
-Optional, disabled by default:
+1. `regex` — custom recognizers in `care/pii/recognizers/`.
 
-3. `piiranha` — third-party model. **Requires legal/license review
-   before DOT deployment.** Loads only from local files.
+Every other provider is registered but **disabled by default**.
+Operators add them to `provider_chain` in `config.yaml` only after
+following the activation policy in
+[`docs/license-and-model-governance.md`](license-and-model-governance.md):
+
+- `presidio` — Microsoft Presidio analyzer with local-only models (MIT).
+- `piiranha` — third-party HF token-classification model.
+  **Requires legal/license review before DOT deployment.** Loads only
+  from local files.
+- `roberta_ner` — RoBERTa-large general English NER (MIT). Supplements
+  regex recognizers for free-text `PER` / `LOC` / `ORG` entities.
+- `mock_pii` — fixture provider for tests; never enabled outside CI.
 
 ## Redaction placeholders
 
 Text redaction replaces detected PII with typed placeholders such as
 `[PERSON_NAME]`, `[VIN]`, `[PHONE_NUMBER]`. The full list lives in
-`care/redaction/policies.py` (Phase 4).
+`care/redaction/policies.py`.
 
 ## Image redaction
 

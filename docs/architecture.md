@@ -23,10 +23,10 @@ care/
     export/             public exporter (5 redacted files)
     workers/            pipeline orchestration
     services/           in-memory job + report store
-    api/                FastAPI routes (Phase 6)
-    cli/                argparse CLI (Phase 6)
-    audit/              SBOM + model manifest emitters (Phase 7)
-frontend/               local-only HTML/CSS/JS UI (Phase 6)
+    api/                FastAPI routes
+    cli/                argparse CLI
+    audit/              SBOM + model manifest emitters
+frontend/               local-only HTML/CSS/JS UI
 ```
 
 ## Pipeline stages

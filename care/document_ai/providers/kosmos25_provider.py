@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.constants import HF_OFFLINE_ENV
 from ...core.errors import ConfigError, OfflineGuardError
+from ...core.plugin_helpers import apply_hf_offline_env
 from ...ocr.base import ProviderHealth
 from ..base import DocumentAIProvider
 from ..result import (
@@ -53,8 +53,8 @@ class Kosmos25Provider(DocumentAIProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._model_dir: Optional[Path] = None
-        self._processor_dir: Optional[Path] = None
+        self._model_dir: Path | None = None
+        self._processor_dir: Path | None = None
         self._device: str = "auto"
         self._dtype: str = "bfloat16"
         self._tasks: dict[str, bool] = {}
@@ -63,18 +63,12 @@ class Kosmos25Provider(DocumentAIProvider):
         self._checksums: dict[str, str] = {}
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError(
-                "kosmos25.allow_network must be false"
-            )
-        if not config.get("local_files_only", True):
-            raise ConfigError("kosmos25.local_files_only must be true")
+        self.assert_offline_config(config)
 
         # Every HF/Transformers plugin MUST set the offline env vars.
-        # We set them here even if the global offline guard hasn't
-        # already.
-        for key, value in HF_OFFLINE_ENV.items():
-            os.environ.setdefault(key, value)
+        # Re-pin defensively even if the global offline guard already
+        # ran — a plugin must never trust upstream env state.
+        apply_hf_offline_env()
 
         model_dir = Path(config.get("model_dir") or "")
         processor_dir = Path(config.get("processor_dir") or model_dir)

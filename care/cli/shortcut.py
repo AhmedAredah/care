@@ -43,7 +43,6 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
-from typing import Optional
 
 _log = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ _DEFAULT_ICON_BY_SYSTEM = {
 }
 
 
-def default_icon_for_system(sysname: str) -> Optional[Path]:
+def default_icon_for_system(sysname: str) -> Path | None:
     """Return the bundled-asset icon path for ``sysname``, if it exists."""
     filename = _DEFAULT_ICON_BY_SYSTEM.get(sysname)
     if not filename:
@@ -92,7 +91,7 @@ def _python_executable() -> str:
     return sys.executable
 
 
-def _install_root(explicit: Optional[Path] = None) -> Path:
+def _install_root(explicit: Path | None = None) -> Path:
     """Working directory the launcher should set as ``cwd``.
 
     Defaults to the parent of the running CLI module's package — that
@@ -107,7 +106,7 @@ def _install_root(explicit: Optional[Path] = None) -> Path:
     return here.parents[2]
 
 
-def _build_command_args(config_path: Optional[Path]) -> list[str]:
+def _build_command_args(config_path: Path | None) -> list[str]:
     """argv for the launcher, minus the python executable."""
     argv = ["-m", "care.cli", "app"]
     if config_path is not None:
@@ -135,10 +134,10 @@ _WINDOWS_PS_TEMPLATE = textwrap.dedent(
 
 def install_windows(
     *,
-    config_path: Optional[Path] = None,
-    install_root: Optional[Path] = None,
-    icon_path: Optional[Path] = None,
-    desktop_dir: Optional[Path] = None,
+    config_path: Path | None = None,
+    install_root: Path | None = None,
+    icon_path: Path | None = None,
+    desktop_dir: Path | None = None,
 ) -> Path:
     """Create ``Desktop\\CARE.lnk``."""
     desktop = (desktop_dir or _desktop_dir()).resolve()
@@ -198,7 +197,7 @@ def _run_powershell(script: str) -> None:
         )
 
 
-def uninstall_windows(*, desktop_dir: Optional[Path] = None) -> bool:
+def uninstall_windows(*, desktop_dir: Path | None = None) -> bool:
     """Remove the .lnk if present. Returns True iff something deleted."""
     desktop = (desktop_dir or _desktop_dir()).resolve()
     lnk = desktop / LAUNCHER_FILENAME["Windows"]
@@ -213,10 +212,10 @@ def uninstall_windows(*, desktop_dir: Optional[Path] = None) -> bool:
 
 def install_macos(
     *,
-    config_path: Optional[Path] = None,
-    install_root: Optional[Path] = None,
-    icon_path: Optional[Path] = None,
-    desktop_dir: Optional[Path] = None,
+    config_path: Path | None = None,
+    install_root: Path | None = None,
+    icon_path: Path | None = None,
+    desktop_dir: Path | None = None,
 ) -> Path:
     """Create ``Desktop/CARE.app`` (a directory bundle)."""
     desktop = (desktop_dir or _desktop_dir()).resolve()
@@ -275,7 +274,7 @@ def _shell_quote(value: str) -> str:
     return "'" + value.replace("'", "'\\''") + "'"
 
 
-def uninstall_macos(*, desktop_dir: Optional[Path] = None) -> bool:
+def uninstall_macos(*, desktop_dir: Path | None = None) -> bool:
     desktop = (desktop_dir or _desktop_dir()).resolve()
     bundle = desktop / LAUNCHER_FILENAME["Darwin"]
     if not bundle.exists():
@@ -297,10 +296,10 @@ def _xdg_applications_dir() -> Path:
 
 def install_linux(
     *,
-    config_path: Optional[Path] = None,
-    install_root: Optional[Path] = None,
-    icon_path: Optional[Path] = None,
-    desktop_dir: Optional[Path] = None,
+    config_path: Path | None = None,
+    install_root: Path | None = None,
+    icon_path: Path | None = None,
+    desktop_dir: Path | None = None,
 ) -> tuple[Path, Path]:
     """Write the .desktop file under ``$XDG_DATA_HOME/applications``.
 
@@ -334,7 +333,7 @@ def install_linux(
 
 
 def _build_linux_desktop_entry(
-    python: str, cmd_args: list[str], cwd: Path, icon_path: Optional[Path]
+    python: str, cmd_args: list[str], cwd: Path, icon_path: Path | None
 ) -> str:
     exec_line = " ".join([_shell_quote(python)] + [_shell_quote(a) for a in cmd_args])
     icon_field = (
@@ -353,7 +352,7 @@ def _build_linux_desktop_entry(
     )
 
 
-def uninstall_linux(*, desktop_dir: Optional[Path] = None) -> bool:
+def uninstall_linux(*, desktop_dir: Path | None = None) -> bool:
     """Remove both copies of the .desktop entry, if present."""
     removed = False
     apps_file = _xdg_applications_dir() / LAUNCHER_FILENAME["Linux"]
@@ -373,11 +372,11 @@ def uninstall_linux(*, desktop_dir: Optional[Path] = None) -> bool:
 
 def install_shortcut(
     *,
-    config_path: Optional[Path] = None,
-    install_root: Optional[Path] = None,
-    icon_path: Optional[Path] = None,
-    desktop_dir: Optional[Path] = None,
-    system: Optional[str] = None,
+    config_path: Path | None = None,
+    install_root: Path | None = None,
+    icon_path: Path | None = None,
+    desktop_dir: Path | None = None,
+    system: str | None = None,
 ) -> object:
     """Pick the right installer for the running platform.
 
@@ -404,7 +403,7 @@ def install_shortcut(
 
 
 def uninstall_shortcut(
-    *, desktop_dir: Optional[Path] = None, system: Optional[str] = None
+    *, desktop_dir: Path | None = None, system: str | None = None
 ) -> bool:
     sysname = system or platform.system()
     if sysname == "Windows":

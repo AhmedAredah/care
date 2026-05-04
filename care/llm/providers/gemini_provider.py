@@ -1,8 +1,11 @@
 """Google Gemini cloud provider (Phase 12).
 
 DISABLED BY DEFAULT. Network required. Sends data to Google. Refused
-in offline mode. SDK (``google.generativeai`` or ``google.genai``)
-imported inside ``load()``.
+in offline mode.
+
+The vendor SDK is imported inside ``load()``. We prefer the new
+``google.genai`` package; ``google.generativeai`` is upstream-deprecated
+but still works as a fallback so existing installs don't break.
 """
 from __future__ import annotations
 
@@ -48,14 +51,14 @@ class GeminiProvider(LLMProvider):
         if not config.get("api_key"):
             raise ConfigError(f"{self.provider_name}: api_key is required")
         try:
-            import google.generativeai  # type: ignore[import-not-found]  # noqa: F401
+            import google.genai  # type: ignore[import-not-found]  # noqa: F401
         except ImportError:
             try:
-                import google.genai  # type: ignore[import-not-found]  # noqa: F401
+                import google.generativeai  # type: ignore[import-not-found]  # noqa: F401
             except ImportError as exc:
                 raise ConfigError(
-                    f"{self.provider_name}: google.generativeai / google.genai "
-                    "SDK is not installed."
+                    f"{self.provider_name}: google-genai (preferred) or "
+                    "google-generativeai SDK is not installed."
                 ) from exc
         self._config = dict(config)
         self._loaded = True

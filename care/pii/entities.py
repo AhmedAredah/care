@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 # Canonical entity types. The redaction layer maps these to placeholder
 # strings (Phase 4). Detectors are free to return additional types but
@@ -34,11 +32,11 @@ ENTITY_TYPES: frozenset[str] = frozenset({
 class PIIEntity:
     entity_type: str
     text: str
-    normalized_text: Optional[str] = None
-    start_offset: Optional[int] = None
-    end_offset: Optional[int] = None
-    page_index: Optional[int] = None
-    bbox: Optional[list[float]] = None
+    normalized_text: str | None = None
+    start_offset: int | None = None
+    end_offset: int | None = None
+    page_index: int | None = None
+    bbox: list[float] | None = None
     confidence: float = 1.0
     provider: str = ""
     detection_reason: str = ""

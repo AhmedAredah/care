@@ -24,9 +24,9 @@ import shutil
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ..core.errors import CAREError, PathTraversalError
 from ..core.paths import normalize_input_path
@@ -51,8 +51,8 @@ class BuilderSessionError(CAREError):
 @dataclass
 class BuilderWord:
     text: str
-    bbox: Optional[list[float]] = None  # image-space pixels at session DPI
-    confidence: Optional[float] = None  # OCR confidence in [0..1]; 1.0 for native text
+    bbox: list[float] | None = None  # image-space pixels at session DPI
+    confidence: float | None = None  # OCR confidence in [0..1]; 1.0 for native text
 
 
 @dataclass
@@ -73,7 +73,7 @@ class BuilderSession:
     document_ir: DocumentIR
     created_at: str
 
-    def page(self, index: int) -> Optional[BuilderPage]:
+    def page(self, index: int) -> BuilderPage | None:
         for p in self.pages:
             if p.index == index:
                 return p
@@ -81,7 +81,7 @@ class BuilderSession:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _new_token() -> str:
@@ -127,7 +127,7 @@ class TemplateBuilderStore:
     def __init__(
         self,
         work_dir: Path,
-        backend: Optional[PDFImageBackend] = None,
+        backend: PDFImageBackend | None = None,
     ) -> None:
         self._work_dir = Path(work_dir).resolve()
         self._backend = backend or PypdfiumPDFImageBackend()
@@ -169,7 +169,9 @@ class TemplateBuilderStore:
             try:
                 src = normalize_input_path(str(source_path))
             except ValueError as exc:
-                raise BuilderSessionError(f"source_path must be absolute: {exc}")
+                raise BuilderSessionError(
+                    f"source_path must be absolute: {exc}"
+                ) from exc
         if not src.exists() or not src.is_file():
             raise BuilderSessionError("source_path does not exist or is not a file")
 
@@ -245,7 +247,7 @@ class TemplateBuilderStore:
             self._sessions[token] = session
         return session
 
-    def get_session(self, token: str) -> Optional[BuilderSession]:
+    def get_session(self, token: str) -> BuilderSession | None:
         if not TOKEN_RE.fullmatch(token):
             return None
         with self._lock:
@@ -276,10 +278,10 @@ class TemplateBuilderStore:
 
 
 _store_lock = threading.Lock()
-_store: Optional[TemplateBuilderStore] = None
+_store: TemplateBuilderStore | None = None
 
 
-def get_builder_store(work_dir: Optional[Path] = None) -> TemplateBuilderStore:
+def get_builder_store(work_dir: Path | None = None) -> TemplateBuilderStore:
     """Return the process-local store, creating it once.
 
     ``work_dir`` is read on first call only. Subsequent calls return the

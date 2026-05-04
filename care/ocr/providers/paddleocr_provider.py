@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.errors import ConfigError, OfflineGuardError
 from ..base import OCRProvider, ProviderHealth
@@ -40,9 +40,9 @@ class PaddleOCRProvider(OCRProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._det_dir: Optional[Path] = None
-        self._rec_dir: Optional[Path] = None
-        self._cls_dir: Optional[Path] = None
+        self._det_dir: Path | None = None
+        self._rec_dir: Path | None = None
+        self._cls_dir: Path | None = None
         self._engine: Any = None
 
     def load(self, config: dict[str, Any]) -> None:

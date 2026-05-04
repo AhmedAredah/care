@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.constants import HF_OFFLINE_ENV
 from ...core.errors import ConfigError
@@ -54,7 +54,7 @@ _log = logging.getLogger(__name__)
 # in a crash-report context. Operators that want to redact org names
 # (e.g., for HIPAA-style hospital scrubbing) can set:
 #   pii.providers.roberta_ner.label_map.ORG: VEHICLE_OWNER_INFO
-DEFAULT_LABEL_MAP: dict[str, Optional[str]] = {
+DEFAULT_LABEL_MAP: dict[str, str | None] = {
     "PER": "PERSON_NAME",
     "LOC": "ADDRESS",
     "ORG": None,
@@ -79,9 +79,9 @@ class RobertaNERProvider(HFTokenClassificationMixin, PIIDetectionProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._model_dir: Optional[Path] = None
+        self._model_dir: Path | None = None
         self._pipeline: Any = None
-        self._label_map: dict[str, Optional[str]] = dict(DEFAULT_LABEL_MAP)
+        self._label_map: dict[str, str | None] = dict(DEFAULT_LABEL_MAP)
         self._min_confidence: float = 0.85
         self._aggregation_strategy: str = "simple"
         self._checksums: dict[str, str] = {}
@@ -109,12 +109,12 @@ class RobertaNERProvider(HFTokenClassificationMixin, PIIDetectionProvider):
         self._loaded = True
 
     @staticmethod
-    def _merge_label_map(custom_map: Any) -> dict[str, Optional[str]]:
+    def _merge_label_map(custom_map: Any) -> dict[str, str | None]:
         """Operator-supplied ``label_map`` merges over default; values
         may be ``None`` (drop) or any string in ``ENTITY_TYPES``."""
         if not isinstance(custom_map, dict):
             raise ConfigError("roberta_ner.label_map must be a dict if set")
-        merged_map: dict[str, Optional[str]] = dict(DEFAULT_LABEL_MAP)
+        merged_map: dict[str, str | None] = dict(DEFAULT_LABEL_MAP)
         for k, v in custom_map.items():
             key = str(k).upper()
             if v is None:
@@ -137,7 +137,7 @@ class RobertaNERProvider(HFTokenClassificationMixin, PIIDetectionProvider):
     ) -> list[PIIEntity]:
         return self._run_inference(text)
 
-    def _map_label(self, label: str) -> Optional[str]:
+    def _map_label(self, label: str) -> str | None:
         """RoBERTa's policy: a label that the merged map points at
         ``None`` is dropped (default behavior for ORG/MISC). Unknown
         labels are also dropped — the NER head produces only four

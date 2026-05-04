@@ -8,61 +8,59 @@ rest of the pipeline never depends on a specific provider.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class AlternativeSource(BaseModel):
     provider: str
     text: str
-    confidence: Optional[float] = None
-    bbox: Optional[list[float]] = None
+    confidence: float | None = None
+    bbox: list[float] | None = None
 
 
 class Provenance(BaseModel):
     provider: str
     provider_version: str = "unknown"
     provider_type: str = "unknown"
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class Word(BaseModel):
     id: str
     text: str
-    bbox: Optional[list[float]] = None
-    confidence: Optional[float] = None
+    bbox: list[float] | None = None
+    confidence: float | None = None
     source: str
     source_provider_type: str
     source_provider_version: str = "unknown"
     alternative_sources: list[AlternativeSource] = Field(default_factory=list)
-    provenance: Optional[Provenance] = None
+    provenance: Provenance | None = None
     can_map_to_image_coordinates: bool = False
 
 
 class Line(BaseModel):
     id: str
     text: str = ""
-    bbox: Optional[list[float]] = None
+    bbox: list[float] | None = None
     word_ids: list[str] = Field(default_factory=list)
-    confidence: Optional[float] = None
+    confidence: float | None = None
     source: str = "unknown"
 
 
 class Block(BaseModel):
     id: str
     text: str = ""
-    bbox: Optional[list[float]] = None
+    bbox: list[float] | None = None
     line_ids: list[str] = Field(default_factory=list)
-    role: Optional[str] = None
+    role: str | None = None
     source: str = "unknown"
 
 
 class Region(BaseModel):
     id: str
     label: str
-    bbox: Optional[list[float]] = None
-    confidence: Optional[float] = None
+    bbox: list[float] | None = None
+    confidence: float | None = None
     requires_review: bool = False
     source: str = "unknown"
 
@@ -70,7 +68,7 @@ class Region(BaseModel):
 class Warning(BaseModel):
     code: str
     message: str
-    page_index: Optional[int] = None
+    page_index: int | None = None
 
 
 class Page(BaseModel):
@@ -79,7 +77,7 @@ class Page(BaseModel):
     height: int
     rotation: int = 0
     text_source: str = "unknown"
-    rendered_image_path: Optional[str] = None
+    rendered_image_path: str | None = None
     blocks: list[Block] = Field(default_factory=list)
     lines: list[Line] = Field(default_factory=list)
     words: list[Word] = Field(default_factory=list)

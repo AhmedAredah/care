@@ -20,7 +20,6 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -104,7 +103,7 @@ class _NoCacheStaticFiles(StaticFiles):
         return response
 
 
-def create_app(*, frontend_dir: Optional[Path] = None) -> FastAPI:
+def create_app(*, frontend_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title=APP_NAME, version=APP_VERSION, lifespan=_lifespan)
 
     api_prefix = "/api"

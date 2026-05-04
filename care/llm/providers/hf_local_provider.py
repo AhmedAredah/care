@@ -7,12 +7,12 @@ re-applied on every load. No HTTP endpoint, no network.
 from __future__ import annotations
 
 import hashlib
-import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.constants import HF_OFFLINE_ENV
 from ...core.errors import ConfigError, OfflineGuardError
+from ...core.plugin_helpers import apply_hf_offline_env
 from ...ocr.base import ProviderHealth
 from ..base import LLMProvider
 from ..safety import redact_secrets
@@ -32,19 +32,13 @@ class HFLocalProvider(LLMProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._model_dir: Optional[Path] = None
+        self._model_dir: Path | None = None
         self._config: dict[str, Any] = {}
         self._checksums: dict[str, str] = {}
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError(f"{self.provider_name}: allow_network must be false")
-        if not config.get("local_files_only", True):
-            raise ConfigError(
-                f"{self.provider_name}: local_files_only must be true"
-            )
-        for key, value in HF_OFFLINE_ENV.items():
-            os.environ[key] = value
+        self.assert_offline_config(config)
+        apply_hf_offline_env()
         model_dir = Path(config.get("model_dir") or "")
         if not str(model_dir) or not model_dir.exists():
             raise OfflineGuardError(

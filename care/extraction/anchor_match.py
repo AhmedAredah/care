@@ -29,7 +29,6 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Optional
 
 DEFAULT_FUZZY_THRESHOLD = 0.78
 """Minimum SequenceMatcher ratio for a fuzzy match to be accepted.
@@ -83,8 +82,8 @@ class AnchorMatch:
     found: bool
     method: str  # "exact" | "fuzzy" | "miss"
     score: float
-    matched_text: Optional[str]
-    matched_offset: Optional[int]
+    matched_text: str | None
+    matched_offset: int | None
 
     @property
     def is_exact(self) -> bool:
@@ -188,7 +187,7 @@ def _token_spans(text: str) -> list[tuple[int, int]]:
 
 def _scan_normalized_tokens(
     haystack: str, anchor: str, search_from: int
-) -> Optional[tuple[str, int]]:
+) -> tuple[str, int] | None:
     """Walk the haystack token by token, normalize each, and return the
     first token whose normalized form equals the normalized anchor.
     Used to catch punctuation-only and casing-only differences that

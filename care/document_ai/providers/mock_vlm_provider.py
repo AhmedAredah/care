@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...ocr.base import ProviderHealth
 from ..base import DocumentAIProvider
 from ..result import (
     CandidateRegion,
@@ -22,8 +23,6 @@ from ..result import (
     SpatialTextResult,
     SpatialWord,
 )
-from ...ocr.base import ProviderHealth
-
 
 VALID_MODES = {"default", "no_bboxes", "conflict_with_ocr", "hallucinated", "unmapped_pii"}
 

@@ -6,8 +6,9 @@ text and overpaints image regions before public export.
 ## Detection → mapping → redaction
 
 1. **Detection.** The PII provider chain (`regex` by default; optional
-   `presidio` and `piiranha`) emits `PIIEntity` records carrying the
-   entity type, source-text offsets, and a confidence.
+   `presidio`, `piiranha`, and `roberta_ner`) emits `PIIEntity`
+   records carrying the entity type, source-text offsets, and a
+   confidence.
 2. **Mapping.** `redaction/bbox_mapper.py` walks each page's words
    and pairs entity-text spans with the corresponding word bboxes.
    Entities whose source span has no bbox stay unmapped, which the

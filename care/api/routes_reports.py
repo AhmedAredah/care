@@ -20,7 +20,6 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
@@ -55,7 +54,7 @@ def _resolve_export_subpath(
     try:
         target = safe_join(export_root, subdir, *parts)
     except PathTraversalError as exc:  # pragma: no cover - defensive
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="artifact not found")
     return target

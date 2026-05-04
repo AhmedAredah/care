@@ -1,7 +1,7 @@
 """Export manifest builder."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from ..core.config import AppConfig
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from ..workers.pipeline import ReportArtifact
 
 
-def build_manifest(artifact: "ReportArtifact", config: AppConfig) -> dict[str, Any]:
+def build_manifest(artifact: ReportArtifact, config: AppConfig) -> dict[str, Any]:
     template = artifact.template_match
     return {
         "source_sha256": artifact.file_entry.sha256,
@@ -31,5 +31,5 @@ def build_manifest(artifact: "ReportArtifact", config: AppConfig) -> dict[str, A
         "diagram_confidence": artifact.qa.diagram_confidence,
         "narrative_confidence": artifact.qa.narrative_confidence,
         "text_source": artifact.text_source,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }

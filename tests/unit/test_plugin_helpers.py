@@ -16,8 +16,10 @@ from pathlib import Path
 
 import pytest
 
+from care.core.constants import HF_OFFLINE_ENV
 from care.core.errors import ConfigError
 from care.core.plugin_helpers import (
+    apply_hf_offline_env,
     assert_offline_config,
     evaluate_model_files_present,
 )
@@ -247,3 +249,101 @@ def test_document_ai_base_exposes_assert_offline_config_classmethod() -> None:
 
     with pytest.raises(ConfigError, match="fakevlm.local_files_only"):
         _FakeVLM.assert_offline_config({"local_files_only": False})
+
+
+def test_llm_base_exposes_assert_offline_config_classmethod() -> None:
+    """Local-LLM providers (hf_local, future ollama) call the same
+    classmethod from their ``load()`` — parity with the OCR / PII /
+    DocumentAI layers. Cloud providers do not call it (they require
+    network by design and run their own offline-mode rejection)."""
+    from care.llm.base import LLMProvider
+
+    class _FakeLocalLLM(LLMProvider):
+        provider_name = "fake_local_llm"
+        provider_type = "local_llm_provider"
+
+        def load(self, config): pass  # pragma: no cover
+        def healthcheck(self): pass  # pragma: no cover
+        def get_model_manifest(self): return {}  # pragma: no cover
+
+    with pytest.raises(ConfigError, match="fake_local_llm.allow_network"):
+        _FakeLocalLLM.assert_offline_config({"allow_network": True})
+
+
+# ---- apply_hf_offline_env --------------------------------------------------
+
+
+def test_apply_hf_offline_env_force_overwrites_stale_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Force-pin (the default) overwrites pre-existing values — defends
+    against a misbehaving test or CLI invocation that left
+    ``TRANSFORMERS_OFFLINE=0`` in the environment before the plugin
+    loaded."""
+    for key in HF_OFFLINE_ENV:
+        monkeypatch.setenv(key, "0")
+    apply_hf_offline_env()
+    import os
+    for key, value in HF_OFFLINE_ENV.items():
+        assert os.environ[key] == value
+
+
+def test_apply_hf_offline_env_setdefault_preserves_existing_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``force=False`` (used by the global startup guard) does NOT
+    overwrite values an operator may have set deliberately. The
+    behaviour matters only at process start — by the time a plugin
+    loads, the only acceptable state is the pinned one."""
+    for key in HF_OFFLINE_ENV:
+        monkeypatch.setenv(key, "operator-set")
+    apply_hf_offline_env(force=False)
+    import os
+    for key in HF_OFFLINE_ENV:
+        assert os.environ[key] == "operator-set"
+
+
+# ---- per-provider offline-gate drift detection -----------------------------
+#
+# The #28 refactor centralised the offline-mode config gate, but four
+# providers initially missed the migration and kept their own inline
+# checks. The tests below walk every concrete provider that should run
+# the gate and assert that ``load({"allow_network": True})`` raises a
+# ``ConfigError`` with the provider name in the message — i.e. the
+# gate fires before any model-loading code runs. A new provider that
+# forgets to call ``self.assert_offline_config(config)`` first will
+# trip this test rather than silently shipping a network-permissive
+# load path.
+
+
+@pytest.mark.parametrize(
+    ("import_path", "class_name", "expected_name"),
+    [
+        ("care.pii.providers.presidio_provider", "PresidioPIIProvider", "presidio"),
+        (
+            "care.document_ai.providers.kosmos25_provider",
+            "Kosmos25Provider",
+            "kosmos25",
+        ),
+        (
+            "care.document_ai.providers.layoutlm_provider",
+            "LayoutLMProvider",
+            "layoutlm",
+        ),
+        (
+            "care.llm.providers.hf_local_provider",
+            "HFLocalProvider",
+            "hf_local",
+        ),
+    ],
+)
+def test_concrete_provider_load_runs_offline_gate_first(
+    import_path: str, class_name: str, expected_name: str
+) -> None:
+    import importlib
+
+    module = importlib.import_module(import_path)
+    provider_cls = getattr(module, class_name)
+    provider = provider_cls()
+    with pytest.raises(ConfigError, match=expected_name):
+        provider.load({"allow_network": True})

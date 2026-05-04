@@ -18,7 +18,7 @@ SUPPORTED_FILE_EXTENSIONS: frozenset[str] = frozenset({
 
 # QA flag vocabulary used by the reconciliation and review stages.
 # Phase 1 lists the full set so downstream code (Phase 3+) has a stable
-# vocabulary to reference. 
+# vocabulary to reference.
 QA_FLAGS: frozenset[str] = frozenset({
     "VLM_USED_FOR_EXTRACTION",
     "VLM_USED_FOR_TEMPLATE_DETECTION",

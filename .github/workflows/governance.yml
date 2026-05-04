@@ -40,6 +40,9 @@ jobs:
           pip install uv
           uv sync
 
+      - name: Run linter (ruff)
+        run: uv run ruff check care tests scripts
+
       - name: Run policy check
         run: uv run python scripts/governance_check.py
 

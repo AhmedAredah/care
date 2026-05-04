@@ -207,8 +207,8 @@ def test_extract_text_layer_dpi_scales_bboxes(tmp_path: Path) -> None:
     assert low_words and high_words
     # Same word count, paired in order.
     assert len(low_words) == len(high_words)
-    for lo, hi in zip(low_words, high_words):
-        for li, hi_v in zip(lo.bbox, hi.bbox):
+    for lo, hi in zip(low_words, high_words, strict=True):
+        for li, hi_v in zip(lo.bbox, hi.bbox, strict=True):
             # Tolerate rounding — should be roughly 2× since 144/72 = 2.
             if li == 0:
                 continue

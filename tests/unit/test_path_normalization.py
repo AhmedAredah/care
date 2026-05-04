@@ -10,7 +10,6 @@ from care.core.paths import (
     normalize_input_path,
 )
 
-
 # ----- absolute detection (cross-platform) --------------------------------
 
 

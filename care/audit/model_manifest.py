@@ -19,9 +19,9 @@ output mirrors the registry layout.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ..document_ai.registry import get_registry as get_vlm_registry
 from ..ocr.registry import get_registry as get_ocr_registry
@@ -79,7 +79,7 @@ def _provider_meta(group: str, name: str) -> dict[str, Any]:
     }
 
 
-def build_model_manifest(*, models_dir: Optional[Path] = None) -> dict[str, Any]:
+def build_model_manifest(*, models_dir: Path | None = None) -> dict[str, Any]:
     """Build the per-provider model manifest document.
 
     ``models_dir`` defaults to ``./models`` relative to CWD. Missing
@@ -115,6 +115,6 @@ def build_model_manifest(*, models_dir: Optional[Path] = None) -> dict[str, Any]
     return {
         "format": "care.model_manifest.v1",
         "models_dir": str(root),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "groups": groups,
     }

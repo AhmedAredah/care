@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import copy
 from collections import defaultdict
-from typing import Iterable
+from collections.abc import Iterable
 
 from .entities import PIIEntity
 

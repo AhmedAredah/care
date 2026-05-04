@@ -70,7 +70,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import ValidationError
 
-from ..core.config import AppConfig, DEFAULT_CONFIG_PATHS
+from ..core.config import DEFAULT_CONFIG_PATHS, AppConfig
 from ..core.config_writer import resolve_write_path, save_patch
 from ..core.governance_guard import (
     check_immutable_violations,

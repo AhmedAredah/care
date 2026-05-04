@@ -8,9 +8,6 @@ on this router.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -27,7 +24,7 @@ router = APIRouter()
 
 class JobSubmission(BaseModel):
     input_dir: str = Field(..., description="Absolute path to a directory of input files")
-    jurisdiction: Optional[str] = Field(
+    jurisdiction: str | None = Field(
         default=None,
         description=(
             "Optional jurisdiction allowlist. When set, only templates whose "
@@ -35,7 +32,7 @@ class JobSubmission(BaseModel):
             "missing means no filter (use all templates)."
         ),
     )
-    template_ids: Optional[list[str]] = Field(
+    template_ids: list[str] | None = Field(
         default=None,
         description=(
             "Optional template_id allowlist. When set, only templates with "
@@ -48,7 +45,7 @@ class JobSubmission(BaseModel):
 
 def _build_filtered_registry(
     config: AppConfig, body: JobSubmission
-) -> tuple[TemplateRegistry, Optional[dict[str, object]]]:
+) -> tuple[TemplateRegistry, dict[str, object] | None]:
     """Load every template from disk and apply the per-job allowlist.
 
     Returns the (possibly unfiltered) registry plus a small audit dict
@@ -59,7 +56,7 @@ def _build_filtered_registry(
         jurisdiction=body.jurisdiction,
         template_ids=body.template_ids,
     )
-    audit: Optional[dict[str, object]] = None
+    audit: dict[str, object] | None = None
     juris = (body.jurisdiction or "").strip() or None
     ids = [t for t in (body.template_ids or []) if t and t.strip()]
     if juris is not None or ids:
@@ -79,11 +76,11 @@ def submit_job(
 ) -> dict[str, object]:
     try:
         input_dir = normalize_input_path(body.input_dir)
-    except ValueError:
+    except ValueError as exc:
         raise HTTPException(
             status_code=400,
             detail="input_dir must be an absolute path",
-        )
+        ) from exc
     if not input_dir.exists() or not input_dir.is_dir():
         raise HTTPException(
             status_code=404,

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 import yaml as pyyaml
 
 from care.api.routes_config import patch_config, validate_config

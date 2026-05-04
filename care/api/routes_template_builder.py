@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,7 +30,6 @@ from ..core.config import AppConfig
 from ..core.errors import (
     ConfigError,
     OfflineGuardError,
-    CAREError,
     PathTraversalError,
 )
 from ..core.paths import normalize_input_path
@@ -40,7 +39,6 @@ from ..document_ai.registry import get_registry as get_document_ai_registry
 from ..extraction.diagram_extractor import extract_diagram
 from ..extraction.narrative_extractor import extract_narrative
 from ..services.region_suggester import (
-    RegionSuggestion,
     suggest_regions_for_page,
 )
 from ..services.template_builder import (
@@ -98,7 +96,7 @@ class PreviewRequest(BaseModel):
 
 
 class SaveRequest(BaseModel):
-    token: Optional[str] = None  # optional — useful for round-trip but not required
+    token: str | None = None  # optional — useful for round-trip but not required
     jurisdiction: str
     template_id: str
     template: dict[str, Any]
@@ -107,7 +105,7 @@ class SaveRequest(BaseModel):
 
 class SuggestRegionsRequest(BaseModel):
     token: str
-    page_index: Optional[int] = None  # default: every page
+    page_index: int | None = None  # default: every page
 
 
 # ----- POST /source ------------------------------------------------------
@@ -121,7 +119,7 @@ def create_source(
     try:
         src = normalize_input_path(body.path)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not src.exists() or not src.is_file():
         raise HTTPException(status_code=404, detail="source file not found")
     if body.dpi < 72 or body.dpi > 600:
@@ -129,12 +127,12 @@ def create_source(
     try:
         session = store.create_session(src, dpi=body.dpi)
     except BuilderSessionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         _log.exception("create_session failed")
         raise HTTPException(
             status_code=500, detail=f"could not create session: {type(exc).__name__}"
-        )
+        ) from exc
     return session_to_dict(session)
 
 
@@ -171,7 +169,7 @@ def get_source_page(
     try:
         target = store.page_image_path(token, page_index)
     except BuilderSessionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="page image not on disk")
     return FileResponse(
@@ -203,7 +201,7 @@ def _validate_template_dict(template_dict: dict[str, Any]) -> TemplateSchema:
     try:
         return TemplateSchema.model_validate(template_dict)
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors())
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
 
 
 # ----- POST /preview ----------------------------------------------------
@@ -310,7 +308,7 @@ def save_template(
             f"{body.template_id}.yaml",
         )
     except PathTraversalError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if target.exists() and not body.force:
         raise HTTPException(
@@ -337,7 +335,7 @@ def save_template(
 # ----- POST /suggest-regions --------------------------------------------
 
 
-def _maybe_load_layoutlm(config: AppConfig) -> Optional[DocumentAIProvider]:
+def _maybe_load_layoutlm(config: AppConfig) -> DocumentAIProvider | None:
     """Load the LayoutLM provider iff explicitly enabled in config.
 
     Returns ``None`` when:

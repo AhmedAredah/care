@@ -25,7 +25,7 @@ PLACEHOLDERS: dict[str, str] = {
 REDACTION_POLICY_NAME = "dot_default_v1"
 
 # Pixels of padding to add around image-redaction boxes to swallow OCR
-# coordinate uncertainty (CONTRACT §PII Redaction Interface).
+# coordinate uncertainty (GOVERNANCE.md §PII Redaction Interface).
 DEFAULT_BBOX_EXPANSION_PX = 4
 
 

@@ -10,15 +10,15 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
 from care.core.constants import HF_OFFLINE_ENV
 from care.core.errors import ConfigError, OfflineGuardError
 from care.pii._hf_token_classification import (
-    HFTokenClassificationMixin,
     _VALID_AGGREGATION_STRATEGIES,
+    HFTokenClassificationMixin,
 )
 from care.pii.base import PIIDetectionProvider
 from care.pii.entities import PIIEntity
@@ -66,7 +66,7 @@ class _FixtureProvider(HFTokenClassificationMixin, PIIDetectionProvider):
     def get_model_manifest(self) -> dict[str, Any]:  # pragma: no cover
         return {}
 
-    def _map_label(self, label: str) -> Optional[str]:
+    def _map_label(self, label: str) -> str | None:
         return "PERSON_NAME" if label.upper() == "PER" else None
 
 

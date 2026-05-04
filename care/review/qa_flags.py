@@ -6,8 +6,8 @@ write any public artifact when `qa.export_blocked` is True.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
 
 from ..core.constants import BLOCKING_QA_FLAGS, TEMPLATE_UNKNOWN_ID
 from ..document_ir.models import Warning as IRWarning
@@ -24,20 +24,20 @@ class QAReport:
     blocking_reasons: list[str] = field(default_factory=list)
     qa_flags: list[str] = field(default_factory=list)
     requires_human_review: bool = False
-    template_confidence: Optional[float] = None
-    diagram_confidence: Optional[float] = None
-    narrative_confidence: Optional[float] = None
+    template_confidence: float | None = None
+    diagram_confidence: float | None = None
+    narrative_confidence: float | None = None
     pii_entity_count: int = 0
     pii_unmapped_count: int = 0
 
 
 def build_qa_report(
     template_match: TemplateMatch,
-    diagram: Optional[DiagramExtraction],
-    narrative: Optional[NarrativeExtraction],
+    diagram: DiagramExtraction | None,
+    narrative: NarrativeExtraction | None,
     *,
-    pii_entities_pages: Optional[Iterable[PIIEntity]] = None,
-    vlm_warnings: Optional[Iterable[IRWarning]] = None,
+    pii_entities_pages: Iterable[PIIEntity] | None = None,
+    vlm_warnings: Iterable[IRWarning] | None = None,
     template_confidence_threshold: float = 0.85,
 ) -> QAReport:
     blocking_reasons: list[str] = []
@@ -49,7 +49,7 @@ def build_qa_report(
     if template_match.template_id == TEMPLATE_UNKNOWN_ID:
         qa_flags.append("TEMPLATE_UNKNOWN")
         blocking_reasons.append(
-            "Template is UNKNOWN; CONTRACT requires human review for unknown templates."
+            "Template is UNKNOWN; GOVERNANCE.md requires human review for unknown templates."
         )
         requires_review = True
 

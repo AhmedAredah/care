@@ -5,10 +5,11 @@ time. Manifests are JSON-serializable through `dataclasses.asdict`.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .hashing import sha256_file
 from .supported_files import is_image, is_pdf
@@ -48,7 +49,7 @@ def build_file_entry(path: Path | str) -> FileEntry:
         sha256=sha256_file(p),
         file_type=_classify(p),
         extension=p.suffix.lower(),
-        discovered_at=datetime.now(timezone.utc).isoformat(),
+        discovered_at=datetime.now(UTC).isoformat(),
     )
 
 

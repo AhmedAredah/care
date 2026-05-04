@@ -18,7 +18,6 @@ from care.core.secrets import (
     save_secret,
 )
 
-
 # ----- name validation --------------------------------------------------
 
 

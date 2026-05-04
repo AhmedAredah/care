@@ -11,7 +11,6 @@ from care.ocr.base import OCRProvider
 from care.pii import registry as pii_registry
 from care.pii.base import PIIDetectionProvider
 
-
 # ---------- OCR ----------
 
 

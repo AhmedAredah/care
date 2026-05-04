@@ -1,22 +1,20 @@
 """PII provider registry."""
 from __future__ import annotations
 
-from typing import Type
-
 from ..core.errors import PluginNotFoundError
 from .base import PIIDetectionProvider
 
 
 class PIIRegistry:
     def __init__(self) -> None:
-        self._providers: dict[str, Type[PIIDetectionProvider]] = {}
+        self._providers: dict[str, type[PIIDetectionProvider]] = {}
 
-    def register(self, name: str, provider_cls: Type[PIIDetectionProvider]) -> None:
+    def register(self, name: str, provider_cls: type[PIIDetectionProvider]) -> None:
         if not isinstance(provider_cls, type) or not issubclass(provider_cls, PIIDetectionProvider):
             raise TypeError(f"{provider_cls!r} is not a PIIDetectionProvider subclass")
         self._providers[name] = provider_cls
 
-    def get(self, name: str) -> Type[PIIDetectionProvider]:
+    def get(self, name: str) -> type[PIIDetectionProvider]:
         if name not in self._providers:
             raise PluginNotFoundError(
                 f"PII provider '{name}' is not registered. "

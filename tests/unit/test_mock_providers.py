@@ -8,7 +8,6 @@ from care.ocr.providers.noop_provider import NoopOCRProvider
 from care.ocr.result import OCRResult
 from care.pii.providers.mock_pii_provider import MockPIIProvider
 
-
 # ---------- OCR ----------
 
 

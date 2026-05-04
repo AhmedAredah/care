@@ -11,9 +11,9 @@ LLM/VLM output is suggestion-only — it cannot drive public export, PII
 detection, or image redaction.
 """
 from .base import (
+    PROVIDER_TYPES,
     LLMProvider,
     LLMResult,
-    PROVIDER_TYPES,
 )
 from .registry import LLMRegistry, get_registry, reset_registry
 from .safety import (

@@ -5,8 +5,6 @@ from pathlib import Path
 
 from care.core.config import AppConfig
 from care.export import export_artifact
-from care.extraction.diagram_extractor import DiagramExtraction
-from care.extraction.narrative_extractor import NarrativeExtraction
 from care.ingestion.file_manifest import FileEntry
 from care.pdf.base import FileInspection
 from care.review.qa_flags import QAReport

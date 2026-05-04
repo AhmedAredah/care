@@ -13,7 +13,7 @@ restart-required endpoint reports "unknown" rather than guessing.
 from __future__ import annotations
 
 import threading
-from typing import Any, Optional
+from typing import Any
 
 # Paths whose changes always require a server restart to take effect.
 # host / port are baked into uvicorn at boot. ``expose_to_network``
@@ -26,7 +26,7 @@ RESTART_REQUIRED_PATHS: tuple[str, ...] = (
 )
 
 _LOCK = threading.RLock()
-_BOOT_SNAPSHOT: Optional[dict[str, Any]] = None
+_BOOT_SNAPSHOT: dict[str, Any] | None = None
 
 
 def set_boot_snapshot(*, host: str, port: int, expose_to_network: bool) -> None:
@@ -40,7 +40,7 @@ def set_boot_snapshot(*, host: str, port: int, expose_to_network: bool) -> None:
         }
 
 
-def get_boot_snapshot() -> Optional[dict[str, Any]]:
+def get_boot_snapshot() -> dict[str, Any] | None:
     """Return a copy of the snapshot, or ``None`` if never set."""
     with _LOCK:
         if _BOOT_SNAPSHOT is None:

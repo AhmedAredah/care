@@ -42,7 +42,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ..core.config import AppConfig
 
@@ -63,7 +63,7 @@ DEFAULT_HEIGHT = 800
 APP_USER_MODEL_ID = "AhmedAredah.CARE"
 
 
-def _resolve_app_icon_paths() -> tuple[Optional[Path], Optional[Path]]:
+def _resolve_app_icon_paths() -> tuple[Path | None, Path | None]:
     """Return (ico_path, png_path) for the bundled app icon, if any.
 
     Resolves under ``bundled_resource_root() / "assets"`` which works
@@ -256,7 +256,7 @@ def wait_for_server(
     """
     deadline = time.monotonic() + timeout_s
     health_url = base_url.rstrip("/") + "/api/health"
-    last_err: Optional[Exception] = None
+    last_err: Exception | None = None
     while time.monotonic() < deadline:
         try:
             with urllib.request.urlopen(health_url, timeout=2.0) as response:
@@ -271,7 +271,7 @@ def wait_for_server(
 
 
 def _build_serve_argv(
-    *, host: str, port: int, config_path: Optional[Path]
+    *, host: str, port: int, config_path: Path | None
 ) -> list[str]:
     """Argv for the subprocess that runs `cli serve`."""
     argv = [
@@ -370,14 +370,14 @@ def _start_threaded_uvicorn(host: str, port: int) -> _ThreadedServer:
 def run_app(
     *,
     config: AppConfig,
-    config_path: Optional[Path],
+    config_path: Path | None,
     host: str = "127.0.0.1",
     port: int = 7860,
     title: str = DEFAULT_TITLE,
     width: int = DEFAULT_WIDTH,
     height: int = DEFAULT_HEIGHT,
     server_ready_timeout_s: float = 15.0,
-    use_inprocess_server: Optional[bool] = None,
+    use_inprocess_server: bool | None = None,
 ) -> int:
     """Start the server, open a pywebview window, clean up on close.
 

@@ -2,14 +2,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
 class SpatialWord:
     text: str
-    bbox: Optional[list[float]] = None
-    confidence: Optional[float] = None
+    bbox: list[float] | None = None
+    confidence: float | None = None
 
 
 @dataclass
@@ -23,7 +22,7 @@ class SpatialTextResult:
 class MarkdownSection:
     heading: str = ""
     body: str = ""
-    bbox: Optional[list[float]] = None
+    bbox: list[float] | None = None
 
 
 @dataclass
@@ -36,8 +35,8 @@ class MarkdownResult:
 @dataclass
 class CandidateRegion:
     label: str
-    bbox: Optional[list[float]] = None
-    confidence: Optional[float] = None
+    bbox: list[float] | None = None
+    confidence: float | None = None
 
 
 @dataclass
@@ -49,16 +48,16 @@ class RegionDetectionResult:
 @dataclass
 class DocumentQAResult:
     answer: str = ""
-    confidence: Optional[float] = None
+    confidence: float | None = None
     provider: str = ""
 
 
 @dataclass
 class DocumentAIResult:
-    spatial_text: Optional[SpatialTextResult] = None
-    markdown: Optional[MarkdownResult] = None
-    regions: Optional[RegionDetectionResult] = None
-    qa: Optional[DocumentQAResult] = None
+    spatial_text: SpatialTextResult | None = None
+    markdown: MarkdownResult | None = None
+    regions: RegionDetectionResult | None = None
+    qa: DocumentQAResult | None = None
     provider_name: str = ""
     provider_version: str = ""
     warnings: list[str] = field(default_factory=list)

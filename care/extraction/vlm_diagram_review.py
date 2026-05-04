@@ -20,8 +20,8 @@ block by mistake.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Optional
 
 from ..document_ai.base import DocumentAIProvider
 
@@ -34,7 +34,7 @@ def vlm_disagrees_with_diagram(
     providers: Iterable[DocumentAIProvider],
     keywords: list[str],
     page_index: int,
-) -> Optional[str]:
+) -> str | None:
     """Return a flag string when the VLM disagrees, else None.
 
     Walks the provider chain and asks each in turn for a description.
@@ -66,7 +66,7 @@ def vlm_disagrees_with_diagram(
 
 def _describe_image(
     provider: DocumentAIProvider, image_path: str, page_index: int
-) -> Optional[str]:
+) -> str | None:
     """Try the cheapest description method available on the provider.
 
     Returns the description text or None if the provider can't help.

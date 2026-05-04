@@ -11,7 +11,6 @@ from care.llm.safety import (
     reject_in_offline_mode,
 )
 
-
 # ----- is_loopback_url ----------------------------------------------------
 
 

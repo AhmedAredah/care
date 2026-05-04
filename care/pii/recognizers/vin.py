@@ -14,7 +14,6 @@ import re
 
 from ._base import RegexRecognizer
 
-
 # Letter → numeric value per 49 CFR §565.15. I, O, Q are excluded
 # from the VIN alphabet entirely (already enforced by the pattern).
 _TRANSLITERATE: dict[str, int] = {

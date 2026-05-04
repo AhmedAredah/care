@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from PIL import Image
 
@@ -31,8 +30,8 @@ from .region_extractor import bbox_norm_to_pixels, is_valid_bbox_norm
 class DiagramExtraction:
     page_index: int
     bbox_norm: tuple[float, float, float, float]
-    bbox_pixels: Optional[tuple[int, int, int, int]] = None
-    image_path: Optional[str] = None  # path to UNREDACTED crop in work_dir
+    bbox_pixels: tuple[int, int, int, int] | None = None
+    image_path: str | None = None  # path to UNREDACTED crop in work_dir
     confidence: float = 0.0
     requires_review: bool = False
     warnings: list[str] = field(default_factory=list)
@@ -94,7 +93,7 @@ def _score_diagram_candidate(
     bbox_norm: tuple[float, float, float, float],
     source_image_paths: dict[int, Path],
     *,
-    diagram_continuation: Optional[DiagramContinuation],
+    diagram_continuation: DiagramContinuation | None,
 ) -> tuple[float, str]:
     """Return ``(score, reason)`` for one diagram-candidate page.
 
@@ -138,7 +137,7 @@ def extract_diagram(
     *,
     work_dir: Path | str,
     source_image_paths: dict[int, Path],
-) -> Optional[DiagramExtraction]:
+) -> DiagramExtraction | None:
     """Crop the diagram region defined by the matched template.
 
     Returns None when the template does not declare a diagram region.
@@ -154,7 +153,7 @@ def extract_diagram(
        ``DIAGRAM_CANDIDATE_PAGE_USED`` (informational unless review
        was already required).
     """
-    region: Optional[TemplateRegion] = template.regions.get("diagram")
+    region: TemplateRegion | None = template.regions.get("diagram")
     if region is None or region.bbox_norm is None:
         return None
 

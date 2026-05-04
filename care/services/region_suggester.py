@@ -29,9 +29,8 @@ Output safety guarantees (mirrored on every suggestion record):
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Any, Iterable, Optional
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from ..document_ai.base import DocumentAIProvider
 from ..services.template_builder import BuilderPage
@@ -56,7 +55,7 @@ class RegionSuggestion:
 def suggest_regions_for_page(
     page: BuilderPage,
     *,
-    layoutlm_provider: Optional[DocumentAIProvider] = None,
+    layoutlm_provider: DocumentAIProvider | None = None,
     band_count: int = 4,
 ) -> tuple[list[RegionSuggestion], list[str]]:
     """Return ``(suggestions, qa_flags)`` for one builder page.

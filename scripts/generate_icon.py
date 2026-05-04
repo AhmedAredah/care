@@ -122,10 +122,6 @@ def _add_top_sheen(base: Image.Image) -> Image.Image:
     # the sheen contributes; elsewhere it's invisible.
     base_alpha = base.getchannel("A")
     sheen_alpha = sheen.getchannel("A")
-    clipped_alpha = Image.eval(
-        Image.merge("LA", (sheen_alpha, base_alpha)).getchannel("A"),
-        lambda v: v,
-    )
     # Multiply: sheen's own alpha × base's alpha.
     new_alpha = Image.new("L", base.size, 0)
     new_alpha.paste(

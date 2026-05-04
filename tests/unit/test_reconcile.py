@@ -1,4 +1,4 @@
-"""DocumentIR reconciliation tests (Phase 5 — CONTRACT §OCR / VLM Reconciliation)."""
+"""DocumentIR reconciliation tests (Phase 5 — GOVERNANCE.md §OCR / VLM Reconciliation)."""
 from __future__ import annotations
 
 from care.document_ir.models import (

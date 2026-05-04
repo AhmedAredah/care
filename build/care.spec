@@ -6,9 +6,9 @@
 #   - ``core`` (default) — slim runtime: FastAPI + pywebview + pypdfium2
 #     + ruamel.yaml + the regex/Presidio PII chain. ~80–120 MB onedir.
 #   - ``ml`` — adds torch + transformers (Piiranha, RoBERTa-NER,
-#     Kosmos-2.5, LayoutLM, hf_local LLM). ~2 GB onedir, but everything
-#     ships inside the bundle so the user can opt in to those models
-#     without a separate install.
+#     OpenAI Privacy Filter, Kosmos-2.5, LayoutLM, hf_local LLM).
+#     ~2 GB onedir, but everything ships inside the bundle so the
+#     user can opt in to those models without a separate install.
 #
 # We deliberately use ``onedir`` rather than ``onefile``:
 #   - Fast startup (no per-launch archive extraction).

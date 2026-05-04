@@ -19,6 +19,9 @@ from care.ocr.providers.onnxtr_provider import OnnxTROCRProvider
 from care.ocr.providers.paddleocr_provider import PaddleOCRProvider
 from care.ocr.providers.tesseract_provider import TesseractProvider
 from care.pii.providers.mock_pii_provider import MockPIIProvider
+from care.pii.providers.openai_privacy_filter_provider import (
+    OpenAIPrivacyFilterProvider,
+)
 from care.pii.providers.optional_piiranha_provider import PiiranhaPIIProvider
 from care.pii.providers.presidio_provider import PresidioPIIProvider
 from care.pii.providers.regex_provider import RegexPIIProvider
@@ -40,6 +43,7 @@ from care.pii.providers.roberta_ner_provider import RobertaNERProvider
         (PiiranhaPIIProvider, ("model_dir",), ("config.json",)),
         (PresidioPIIProvider, ("model_dir",), ("config.json",)),
         (RobertaNERProvider, ("model_dir",), ("config.json",)),
+        (OpenAIPrivacyFilterProvider, ("model_dir",), ("config.json",)),
         # --- DocumentAI ---
         (Kosmos25Provider, ("model_dir", "processor_dir"), ("config.json",)),
         (LayoutLMProvider, ("model_dir", "processor_dir"), ("config.json",)),

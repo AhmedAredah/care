@@ -115,7 +115,7 @@ jobs:
           pwsh -File build/build_windows.ps1 -Flavour ${{ matrix.flavour }} -Msi -SkipPyInstaller
 
       - name: Upload unsigned artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unsigned-${{ matrix.flavour }}
           path: |
@@ -167,7 +167,7 @@ jobs:
           artifact-configuration-slug: "care-${{ matrix.flavour }}"
 
       - name: Upload signed artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: signed-${{ matrix.flavour }}
           path: signed/*

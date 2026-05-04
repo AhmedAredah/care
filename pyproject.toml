@@ -70,7 +70,7 @@ ml = [
 # before any SDK call).
 llm-openai = ["openai>=1.40"]
 llm-anthropic = ["anthropic>=0.30"]
-llm-gemini = ["google-generativeai>=0.7"]
+llm-gemini = ["google-generativeai>=0.8.6"]
 
 # OnnxTR OCR engine — opt-in. Pulls onnxruntime + opencv (~400 MB)
 # but stays out of [ml] because there's no torch/transformers

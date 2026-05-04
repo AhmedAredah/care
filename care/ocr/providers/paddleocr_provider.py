@@ -35,6 +35,9 @@ class PaddleOCRProvider(OCRProvider):
     supports_line_bboxes = True
     supports_confidence = True
 
+    MODEL_DIR_KEYS = ("det_model_dir", "rec_model_dir", "cls_model_dir")
+    WEIGHT_MARKERS = ("*.pdmodel", "*.pdiparams")
+
     def __init__(self) -> None:
         self._loaded = False
         self._det_dir: Optional[Path] = None

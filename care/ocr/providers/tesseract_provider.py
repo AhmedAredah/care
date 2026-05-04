@@ -32,6 +32,9 @@ class TesseractProvider(OCRProvider):
     supports_line_bboxes = True
     supports_confidence = True
 
+    MODEL_DIR_KEYS = ("tessdata_dir",)
+    WEIGHT_MARKERS = ("*.traineddata",)
+
     def __init__(self) -> None:
         self._loaded = False
         self._tessdata_dir: Optional[Path] = None

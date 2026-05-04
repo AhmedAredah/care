@@ -103,6 +103,9 @@ class PiiranhaPIIProvider(PIIDetectionProvider):
     supports_bboxes = False
     supports_confidence = True
 
+    MODEL_DIR_KEYS = ("model_dir",)
+    WEIGHT_MARKERS = _REQUIRED_MODEL_FILES
+
     def __init__(self) -> None:
         self._loaded = False
         self._model_dir: Optional[Path] = None

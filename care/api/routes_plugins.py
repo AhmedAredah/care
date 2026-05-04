@@ -11,10 +11,11 @@ wired up:
 
 - ``enabled`` — the provider's own ``enabled`` flag in ``config.yaml``
 - ``in_active_chain`` — membership of the section's ``provider_chain``
-- ``model_files_present`` — boolean check that any ``*_dir`` paths the
-  config points at exist on disk; ``null`` when the provider is
-  pure-Python (e.g. ``regex``) and needs no model files. Path strings
-  themselves are NEVER returned.
+- ``model_files_present`` — boolean check delegated to the provider
+  class's :meth:`model_files_present` classmethod, which knows what
+  config keys point at model directories and what marker files signal
+  a populated install. ``null`` when the provider is pure-Python
+  (e.g. ``regex``). Path strings themselves are NEVER returned.
 - ``license_review_required`` — class flag (e.g. Piiranha's
   CC-BY-NC review obligation). UI uses this to render a warning chip.
 - ``accuracy`` — optional class attribute with benchmark numbers and
@@ -24,97 +25,17 @@ wired up:
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends
 
 from ..core.config import AppConfig
-from ..core.paths import normalize_input_path
 from ..document_ai.registry import get_registry as get_vlm_registry
 from ..ocr.registry import get_registry as get_ocr_registry
 from ..pii.registry import get_registry as get_pii_registry
 from .deps import get_app_config
 
 router = APIRouter()
-
-
-# Keys we look at to decide "are model files installed?". These are
-# the only keys we read from provider config — nothing in the response
-# echoes the path itself.
-_MODEL_DIR_KEYS: tuple[str, ...] = (
-    "model_dir",
-    "processor_dir",
-    "det_model_dir",
-    "rec_model_dir",
-    "cls_model_dir",
-    "tessdata_dir",
-)
-
-
-def _check_model_files_present(provider_cfg: dict[str, Any]) -> Optional[bool]:
-    """Return True if every configured model directory exists on disk
-    and contains at least one plausible weight file.
-
-    Returns ``None`` when no model-dir keys are configured (the
-    provider doesn't need any — e.g., the regex PII provider). Paths
-    are never returned to the caller.
-
-    Format detection:
-    - ``config.json`` → Hugging Face checkpoint (Piiranha, RoBERTa,
-      Kosmos-2.5, LayoutLM, hf_local LLM).
-    - any ``*.onnx`` → ONNX-runtime weights (OnnxTR).
-    - any ``*.pdmodel`` / ``*.pdiparams`` → PaddleOCR weights.
-    - any ``*.traineddata`` → Tesseract language pack.
-    Provider-side ``load()`` does the deeper validation; this endpoint
-    only answers "is anything plausibly there?".
-    """
-    candidates = [
-        (key, provider_cfg[key])
-        for key in _MODEL_DIR_KEYS
-        if provider_cfg.get(key)
-    ]
-    if not candidates:
-        return None
-    for key, path_str in candidates:
-        # normalize_input_path enforces absolute, strips quotes, and
-        # is the project's boundary sanitizer for operator-supplied
-        # filesystem paths (see .github/codeql/README.md). A relative
-        # path here is a misconfiguration — report "not installed"
-        # rather than crash the endpoint.
-        try:
-            path = normalize_input_path(str(path_str))
-        except ValueError:
-            return False
-        if not path.exists() or not path.is_dir():
-            return False
-        if not _model_dir_has_known_weights(path):
-            return False
-    return True
-
-
-# Filename markers that signal a populated model directory. We do not
-# enumerate the directory exhaustively — a single hit is enough to
-# distinguish "operator placed weights" from "empty placeholder dir".
-_HF_MARKER = "config.json"
-_WEIGHT_GLOBS: tuple[str, ...] = (
-    "*.onnx",          # OnnxTR
-    "*.pdmodel",       # PaddleOCR
-    "*.pdiparams",     # PaddleOCR
-    "*.traineddata",   # Tesseract
-)
-
-
-def _model_dir_has_known_weights(path: Path) -> bool:
-    if (path / _HF_MARKER).exists():
-        return True
-    for pattern in _WEIGHT_GLOBS:
-        try:
-            if next(path.glob(pattern), None) is not None:
-                return True
-        except OSError:
-            return False
-    return False
 
 
 # Accuracy tiers surfaced in the UI. Anything else is rejected (the
@@ -168,7 +89,7 @@ def _provider_summary(
         "accuracy": _accuracy_payload(cls),
         "enabled": bool(provider_cfg.get("enabled", False)),
         "in_active_chain": name in chain,
-        "model_files_present": _check_model_files_present(provider_cfg),
+        "model_files_present": cls.model_files_present(provider_cfg),
     }
 
 

@@ -40,6 +40,29 @@ ocr:
       enabled: false
       tessdata_dir: ./models/ocr/tesseract/tessdata
       allow_network: false
+    # OnnxTR — ONNX-runtime port of docTR. Disabled by default; enable
+    # only after dropping the two .onnx weight files into ``model_dir``
+    # (see docs/license-and-model-governance.md). The pair below is
+    # OnnxTR's default (fast detection + crnn_vgg16_bn recognition);
+    # swap reco_arch to ``parseq`` for higher quality on dense forms
+    # at the cost of ~2× CPU latency.
+    onnxtr:
+      enabled: false
+      model_dir: ./models/ocr/onnxtr
+      det_arch: fast_base
+      reco_arch: crnn_vgg16_bn
+      # Optional: override the default ``<arch>.onnx`` filenames if
+      # your operator dropped weights with the upstream hashed names
+      # (e.g. ``rep_fast_base-1b89ebf9.onnx``).
+      # det_file: rep_fast_base-1b89ebf9.onnx
+      # reco_file: crnn_vgg16_bn-743599aa.onnx
+      vocab: french          # latin + accented; covers US English
+      assume_straight_pages: true
+      straighten_pages: false
+      detect_orientation: false
+      low_confidence_threshold: 0.5
+      allow_network: false
+      local_files_only: true
 
 document_ai:
   enabled: false

@@ -44,6 +44,7 @@ def get_registry() -> OCRRegistry:
         _registry = OCRRegistry()
         from .providers.mock_ocr_provider import MockOCRProvider
         from .providers.noop_provider import NoopOCRProvider
+        from .providers.onnxtr_provider import OnnxTROCRProvider
         from .providers.paddleocr_provider import PaddleOCRProvider
         from .providers.tesseract_provider import TesseractProvider
 
@@ -54,6 +55,7 @@ def get_registry() -> OCRRegistry:
         # and Model Governance).
         _registry.register("paddleocr", PaddleOCRProvider)
         _registry.register("tesseract", TesseractProvider)
+        _registry.register("onnxtr", OnnxTROCRProvider)
     return _registry
 
 

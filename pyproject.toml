@@ -72,6 +72,14 @@ llm-openai = ["openai>=1.40"]
 llm-anthropic = ["anthropic>=0.30"]
 llm-gemini = ["google-generativeai>=0.7"]
 
+# OnnxTR OCR engine — opt-in. Pulls onnxruntime + opencv (~400 MB)
+# but stays out of [ml] because there's no torch/transformers
+# requirement. Operators install this extra (or use the offline
+# wheelhouse) before enabling the ``onnxtr`` provider.
+ocr-onnxtr = [
+    "onnxtr[cpu-headless]>=0.8",
+]
+
 [project.urls]
 Homepage = "https://github.com/AhmedAredah/care"
 Repository = "https://github.com/AhmedAredah/care"

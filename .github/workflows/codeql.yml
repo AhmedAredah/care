@@ -70,7 +70,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Python is set up explicitly so CodeQL's extractor sees the
       # same interpreter version we ship with (3.11). Without this,

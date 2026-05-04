@@ -146,7 +146,7 @@ jobs:
 
     steps:
       - name: Download unsigned artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: unsigned-${{ matrix.flavour }}
           path: unsigned
@@ -155,7 +155,7 @@ jobs:
         # SignPath Foundation provides this action. It uploads the
         # artifact zip, kicks off a signing run under our policy, and
         # waits for the signed artifact back.
-        uses: signpath/github-action-submit-signing-request@v1
+        uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: "${{ secrets.SIGNPATH_API_TOKEN }}"
           organization-id: "${{ vars.SIGNPATH_ORGANIZATION_ID }}"
@@ -187,28 +187,28 @@ jobs:
 
       - name: Download signed core artifacts (if signing enabled)
         if: vars.SIGNPATH_ORGANIZATION_ID != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: signed-core
           path: release-assets
 
       - name: Download signed ml artifacts (if signing enabled)
         if: vars.SIGNPATH_ORGANIZATION_ID != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: signed-ml
           path: release-assets
 
       - name: Download unsigned core artifacts (fallback)
         if: vars.SIGNPATH_ORGANIZATION_ID == ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: unsigned-core
           path: release-assets
 
       - name: Download unsigned ml artifacts (fallback)
         if: vars.SIGNPATH_ORGANIZATION_ID == ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: unsigned-ml
           path: release-assets

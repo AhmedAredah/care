@@ -22,7 +22,6 @@ from care.core.errors import ConfigError, OfflineGuardError
 from care.document_ai.providers.layoutlm_provider import LayoutLMProvider
 from care.document_ai.registry import get_registry, reset_registry
 
-
 # ----- helpers ----------------------------------------------------------
 
 

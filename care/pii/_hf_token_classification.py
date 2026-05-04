@@ -22,12 +22,11 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from ..core.constants import HF_OFFLINE_ENV
 from ..core.errors import ConfigError, OfflineGuardError
+from ..core.plugin_helpers import apply_hf_offline_env
 from .entities import PIIEntity
 
 _log = logging.getLogger(__name__)
@@ -89,8 +88,7 @@ class HFTokenClassificationMixin:
         """Re-pin ``HF_HUB_OFFLINE`` / ``TRANSFORMERS_OFFLINE`` etc. on
         every load — guarantees the env state is right even if a
         previous test or CLI invocation left it misconfigured."""
-        for key, value in HF_OFFLINE_ENV.items():
-            os.environ[key] = value
+        apply_hf_offline_env()
 
     @staticmethod
     def _validate_aggregation_strategy(value: str, *, name: str) -> str:
@@ -122,6 +120,8 @@ class HFTokenClassificationMixin:
             from transformers import (  # type: ignore[import-not-found]
                 AutoModelForTokenClassification,
                 AutoTokenizer,
+            )
+            from transformers import (
                 pipeline as hf_pipeline,
             )
         except ImportError as exc:
@@ -181,7 +181,7 @@ class HFTokenClassificationMixin:
             return raw[2:]
         return raw
 
-    def _map_label(self, label: str) -> Optional[str]:
+    def _map_label(self, label: str) -> str | None:
         """Translate a raw HF label to the canonical PII entity type.
 
         Subclasses MUST override. Return ``None`` to drop the span;

@@ -19,7 +19,7 @@ import base64
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from PIL import Image
@@ -27,13 +27,12 @@ from PIL import Image
 from care.core.errors import ConfigError, OfflineGuardError
 from care.llm.providers.openai_provider import OpenAIProvider
 
-
 # ---- fake OpenAI client ------------------------------------------------
 
 
 @dataclass
 class _FakeMessage:
-    content: Optional[str]
+    content: str | None
 
 
 @dataclass
@@ -60,11 +59,11 @@ class _FakeUsage:
 class _FakeResponse:
     choices: list[_FakeChoice]
     model: str = "gpt-4o-mini-2024-07-18"
-    usage: Optional[_FakeUsage] = field(default_factory=_FakeUsage)
+    usage: _FakeUsage | None = field(default_factory=_FakeUsage)
 
 
 class _FakeCompletions:
-    def __init__(self, parent: "_FakeOpenAI") -> None:
+    def __init__(self, parent: _FakeOpenAI) -> None:
         self._parent = parent
 
     def create(self, **kwargs: Any) -> _FakeResponse:
@@ -77,15 +76,15 @@ class _FakeCompletions:
 
 
 class _FakeChat:
-    def __init__(self, parent: "_FakeOpenAI") -> None:
+    def __init__(self, parent: _FakeOpenAI) -> None:
         self.completions = _FakeCompletions(parent)
 
 
 class _FakeOpenAI:
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
-        self.last_request: Optional[dict[str, Any]] = None
-        self.next_response: Optional[_FakeResponse] = None
+        self.last_request: dict[str, Any] | None = None
+        self.next_response: _FakeResponse | None = None
         self.chat = _FakeChat(self)
 
 

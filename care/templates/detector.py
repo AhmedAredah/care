@@ -3,12 +3,11 @@
 If no template scores at or above the configured confidence threshold,
 the detector returns an UNKNOWN match with the `TEMPLATE_UNKNOWN` and
 `TEMPLATE_LOW_CONFIDENCE` flags set. Unknown templates must NEVER be
-auto-exported (CONTRACT §Fail-Closed Rules).
+auto-exported (GOVERNANCE.md §Fail-Closed Rules).
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from ..core.constants import TEMPLATE_UNKNOWN_ID
 from ..document_ir.models import DocumentIR
@@ -20,7 +19,7 @@ from .scoring import TemplateScoreEvidence, score_template
 class TemplateMatchEvidence:
     anchor_text_found: list[str] = field(default_factory=list)
     anchor_text_missing: list[str] = field(default_factory=list)
-    form_number_match: Optional[str] = None
+    form_number_match: str | None = None
     page_count: int = 0
     page_count_in_range: bool = True
     region_bboxes_plausible: bool = True
@@ -31,7 +30,7 @@ class TemplateMatchEvidence:
 @dataclass
 class TemplateMatch:
     template_id: str
-    version: Optional[str]
+    version: str | None
     confidence: float
     evidence: TemplateMatchEvidence
     warnings: list[str] = field(default_factory=list)
@@ -56,7 +55,7 @@ def detect_template(
     registry: TemplateRegistry,
     *,
     confidence_threshold: float = 0.85,
-    ocr_confidence_average: Optional[float] = None,
+    ocr_confidence_average: float | None = None,
 ) -> TemplateMatch:
     """Score every registered template and return the highest-confidence match.
 

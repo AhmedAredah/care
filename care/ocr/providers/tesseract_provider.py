@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import shutil
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.errors import ConfigError, OfflineGuardError
 from ..base import OCRProvider, ProviderHealth
@@ -37,8 +37,8 @@ class TesseractProvider(OCRProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._tessdata_dir: Optional[Path] = None
-        self._binary: Optional[str] = None
+        self._tessdata_dir: Path | None = None
+        self._binary: str | None = None
 
     def load(self, config: dict[str, Any]) -> None:
         self.assert_offline_config(config)

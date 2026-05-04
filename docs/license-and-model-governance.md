@@ -11,7 +11,7 @@ it can be enabled in a deployment.
 listed in the SBOM with its license string:
 
 ```
-python -m care.cli generate-sbom --output dist/sbom.json
+care generate-sbom --output dist/sbom.json
 ```
 
 The output's `licenses.by_package` map is the canonical license
@@ -28,8 +28,8 @@ field is missing.
 | `pillow` | HPND |
 | `pyyaml` | MIT |
 
-(Phase 7 `generate-sbom` produces the authoritative list at build
-time. The table above is illustrative.)
+(`care generate-sbom` produces the authoritative list at build time.
+The table above is illustrative.)
 
 ## Model governance
 
@@ -40,13 +40,20 @@ disabled.**
 | Provider | Default | Generative? | Hallucination risk? | Notes |
 |---|---|---|---|---|
 | `mock_ocr` | n/a | no | no | tests only |
+| `noop` (OCR) | disabled | no | no | placeholder; emits no text |
 | `onnxtr` | disabled | no | no | Apache-2.0 (provider) + Apache-2.0 (docTR weights via OnnxTR releases). **Recommended for printed crash-report forms.** Operator-supplied `*.onnx` weights — see `models/ocr/onnxtr/README.md`. |
 | `paddleocr` | disabled | no | no | Apache-2.0; per-language pack license varies |
 | `tesseract` | disabled | no | no | Apache-2.0; per-language `.traineddata` license varies |
 | `regex` (PII) | enabled | no | no | n/a |
 | `presidio` | disabled | no | no | MIT; bundled spaCy model carries its own license |
 | `piiranha` | disabled | no | no | License-review-required, NOT bundled |
+| `roberta_ner` (PII) | disabled | no | no | MIT (Jean-Baptiste/roberta-large-ner-english). General English NER for free-text PER/LOC/ORG. NOT bundled. |
+| `mock_pii` | n/a | no | no | tests only |
 | `kosmos25` | disabled | **yes** | **yes** | License-review-required, NOT bundled |
+| `layoutlm` | disabled | no | no | License varies by variant — see "LayoutLM" section below. |
+| `mock_vlm` | n/a | no | no | tests only |
+| `hf_local` (LLM) | disabled | varies | varies | Local HF checkpoint; license varies. NOT bundled. Suggestion-only. |
+| `openai` / `anthropic` / `gemini` (LLM) | disabled | yes | yes | Network required; vendor TOS apply. Refused in offline mode. License-review-required. |
 
 ### Activation policy
 
@@ -59,7 +66,7 @@ Before flipping `enabled: true` for any optional provider:
 3. Place the model files under `models/<group>/<provider>/`.
 4. Run `python scripts/compute_model_checksums.py <model_dir>` and
    pin the result alongside the model.
-5. Run `python -m care.cli model-manifest --models-dir models`
+5. Run `care model-manifest --models-dir models`
    and confirm the new provider appears with `model_path_present: true`.
 6. Edit `config.yaml` to set `enabled: true`.
 7. Run `python scripts/verify_no_network.py` to confirm offline
@@ -73,7 +80,7 @@ reconciler refuses to let VLM-only text drive image redaction, and
 the QA gate blocks export when VLM and OCR conflict. Reviewers must
 confirm before any generative-touched report is exported.
 
-## LayoutLM (Phase 10)
+## LayoutLM
 
 LayoutLM is an *optional* discriminative document-understanding model
 from Microsoft. Variants and their licenses (verified on Hugging
@@ -104,7 +111,7 @@ Per-file SHA-256 checksums are computed by the provider on load
 (`Kosmos25Provider._compute_checksums`) and embedded in the runtime
 manifest. They are also recorded by:
 
-- `python -m care.cli model-manifest` (provider-aware report)
+- `care model-manifest` (provider-aware report)
 - `python scripts/compute_model_checksums.py <dir>` (single-dir,
   shell-friendly)
 - `scripts/package_offline_installer.sh` (packaging-time snapshot)

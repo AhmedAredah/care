@@ -17,9 +17,9 @@ swap in CycloneDX or SPDX without touching call sites.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 try:  # pragma: no cover
     import importlib.metadata as md
@@ -53,7 +53,7 @@ def _iter_distributions() -> list[dict[str, Any]]:
 
 def build_sbom(
     *,
-    models_dir: Optional[Path] = None,
+    models_dir: Path | None = None,
     include_packages: bool = True,
 ) -> dict[str, Any]:
     """Build the in-memory SBOM document.
@@ -72,7 +72,7 @@ def build_sbom(
     return {
         "format": "care.sbom.v1",
         "app": {"name": APP_NAME, "version": APP_VERSION},
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "dependencies": distributions,
         "dependency_count": len(distributions),
         "licenses": license_report,

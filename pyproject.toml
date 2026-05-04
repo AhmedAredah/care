@@ -61,15 +61,20 @@ dependencies = [
 # Kept out of the base install so the runtime stays slim on
 # deployments that only use the offline-safe regex/Presidio chain.
 ml = [
-    "transformers>=4.40",
-    "torch>=2.4",
+    "transformers>=4.50",
+    "torch>=2.5",
 ]
 # Cloud LLM SDKs — opt-in only. Each is required only when the
 # matching cloud provider is enabled. None of these are reached at
 # runtime in offline mode (the offline guard rejects cloud providers
 # before any SDK call).
-llm-openai = ["openai>=1.40"]
-llm-anthropic = ["anthropic>=0.30"]
+llm-openai = ["openai>=1.55"]
+llm-anthropic = ["anthropic>=0.50"]
+# google-generativeai is upstream-deprecated in favor of google-genai.
+# The provider plugin imports either SDK (preferring google.genai) so
+# operators can migrate without code change. Floor stays on the
+# deprecated SDK because that's still what most existing installs ship;
+# track replacement before upstream stops publishing wheels.
 llm-gemini = ["google-generativeai>=0.8.6"]
 
 # OnnxTR OCR engine — opt-in. Pulls onnxruntime + opencv (~400 MB)
@@ -100,4 +105,42 @@ packages = ["care"]
 dev = [
     "fpdf2>=2.8.7",
     "pytest>=9.0.3",
+    "ruff>=0.9",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+    "build/work",
+    "models",
+    ".venv",
+    "scripts/bench/data",
+]
+
+[tool.ruff.lint]
+# Start with the high-signal subset. E/F are pyflakes + pycodestyle
+# errors; W is pycodestyle warnings; I is import sorting; B is
+# bugbear (real-bug heuristics); UP is pyupgrade (modern-syntax
+# nudges that don't change semantics).
+select = ["E", "F", "W", "I", "B", "UP"]
+# E501 (line-too-long) — let the formatter handle wrapping; do not
+# block CI on lines a few chars over.
+# B008 — Pydantic / FastAPI dependency-injection patterns rely on
+# function-default-call (e.g. ``Depends(...)``).
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures and helpers may shadow names or import for side
+# effects.
+"tests/**" = ["B011"]
+
+[tool.pytest.ini_options]
+minversion = "9"
+testpaths = ["tests"]
+# The Hugging Face SDK warns about ``HF_TOKEN`` and the resampler
+# default change in DeprecationWarning — both are upstream surface
+# we don't control. Keep them out of the test report.
+filterwarnings = [
+    "ignore::DeprecationWarning:huggingface_hub.*",
 ]

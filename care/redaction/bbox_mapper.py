@@ -1,8 +1,6 @@
 """Map text offsets in the joined-by-space page text back to word bboxes."""
 from __future__ import annotations
 
-from typing import Optional
-
 from ..document_ir.models import Page, Word
 from ..pii.entities import PIIEntity
 
@@ -35,7 +33,7 @@ def map_text_offset_to_words(
     return overlapping
 
 
-def derive_bbox_from_words(words: list[Word]) -> Optional[list[float]]:
+def derive_bbox_from_words(words: list[Word]) -> list[float] | None:
     """Min/max union of every word bbox; None if no word carries a bbox."""
     bboxes = [w.bbox for w in words if w.bbox]
     if not bboxes:

@@ -18,7 +18,8 @@ view it's reachable from anywhere).
 from __future__ import annotations
 
 import re
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 from urllib.parse import urlparse
 
 from ..core.errors import ConfigError, OfflineGuardError

@@ -21,13 +21,10 @@ Phase 7+ adds:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from ..document_ir.models import DocumentIR
 from ..templates.schemas import (
     ContinuationSpec,
-    PageSearch,
-    ShiftedRegionSearch,
     TemplateRegion,
     TemplateSchema,
 )
@@ -46,12 +43,12 @@ get a heads-up while the match is still usable."""
 class NarrativeExtraction:
     page_index: int
     text: str  # verbatim
-    anchor_start: Optional[str] = None
-    anchor_end: Optional[str] = None
+    anchor_start: str | None = None
+    anchor_end: str | None = None
     anchor_start_found: bool = False
     anchor_end_found: bool = False
-    bbox_norm: Optional[tuple[float, float, float, float]] = None
-    bbox_pixels: Optional[tuple[int, int, int, int]] = None
+    bbox_norm: tuple[float, float, float, float] | None = None
+    bbox_pixels: tuple[int, int, int, int] | None = None
     confidence: float = 0.0
     requires_review: bool = False
     warnings: list[str] = field(default_factory=list)
@@ -190,7 +187,7 @@ def _consume_continuation(
         consumed += 1
 
         # Stop early at a "next section" anchor.
-        cutoff_section: Optional[int] = None
+        cutoff_section: int | None = None
         if section_stops_lower:
             text_lower = page_text.lower()
             for sa in section_stops_lower:
@@ -234,7 +231,7 @@ def _shifted_search(
     region: TemplateRegion,
     document_ir: DocumentIR,
     primary_pages: set[int],
-) -> Optional[int]:
+) -> int | None:
     """Scan ``shifted_region_search.search_pages`` (excluding primary
     candidates) for the same anchor labels. Return the best-scoring
     page, or None."""
@@ -259,7 +256,7 @@ def _shifted_search(
 
 def _select_primary(
     region: TemplateRegion, document_ir: DocumentIR
-) -> tuple[Optional[int], list[str], bool]:
+) -> tuple[int | None, list[str], bool]:
     """Score every candidate and pick the best.
 
     Returns ``(page_index_or_None, warnings, ambiguous)``.
@@ -305,9 +302,9 @@ def _select_primary(
 def extract_narrative(
     template: TemplateSchema,
     document_ir: DocumentIR,
-) -> Optional[NarrativeExtraction]:
+) -> NarrativeExtraction | None:
     """Slice the page-text between the template's narrative anchors."""
-    region: Optional[TemplateRegion] = template.regions.get("narrative")
+    region: TemplateRegion | None = template.regions.get("narrative")
     if region is None:
         return None
 
@@ -416,8 +413,8 @@ def extract_narrative(
     if ambiguous:
         confidence = min(confidence, 0.5)
 
-    bbox_norm_tuple: Optional[tuple[float, float, float, float]] = None
-    bbox_pixels: Optional[tuple[int, int, int, int]] = None
+    bbox_norm_tuple: tuple[float, float, float, float] | None = None
+    bbox_pixels: tuple[int, int, int, int] | None = None
     if region.bbox_norm is not None:
         bbox_norm_tuple = (
             float(region.bbox_norm[0]),

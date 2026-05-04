@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from care.main import create_app
 
-
 EXPECTED_API_PATHS = {
     "/api/health",
     "/api/offline/status",

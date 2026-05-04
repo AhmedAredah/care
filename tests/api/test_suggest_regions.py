@@ -14,7 +14,6 @@ Verified invariants:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 from fastapi import HTTPException

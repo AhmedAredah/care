@@ -12,13 +12,12 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
 from care.cli import desktop
 from care.core.config import AppConfig
-
 
 # ----- find_free_port --------------------------------------------------
 
@@ -163,7 +162,7 @@ class _FakeWebview:
     def __init__(self) -> None:
         self.created: list[dict[str, Any]] = []
         self.start_kwargs: dict[str, Any] = {}
-        self.last_window: Optional[_FakeWindow] = None
+        self.last_window: _FakeWindow | None = None
 
     def create_window(self, title: str, url: str, **kwargs: Any):
         self.created.append({"title": title, "url": url, **kwargs})

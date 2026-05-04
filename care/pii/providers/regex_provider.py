@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...ocr.base import ProviderHealth
 from ..base import PIIDetectionProvider
@@ -16,7 +16,7 @@ from ..entities import PIIEntity
 from ..recognizers import ALL_RECOGNIZERS
 
 
-def _load_accuracy() -> Optional[dict[str, Any]]:
+def _load_accuracy() -> dict[str, Any] | None:
     """Read the Tier-A benchmark result committed alongside this module.
 
     Re-run ``scripts/bench/run_pii_bench.py`` against the synthetic

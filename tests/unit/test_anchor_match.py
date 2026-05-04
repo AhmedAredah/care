@@ -9,12 +9,10 @@ import pytest
 
 from care.extraction.anchor_match import (
     DEFAULT_FUZZY_THRESHOLD,
-    AnchorCoverage,
     find_anchor,
     normalize_anchor,
     score_anchor_coverage,
 )
-
 
 # ----- normalize_anchor ----------------------------------------------------
 

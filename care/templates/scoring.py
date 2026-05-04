@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 from ..document_ir.models import DocumentIR
 from ..extraction.anchor_match import (
@@ -32,7 +31,7 @@ from .schemas import TemplateSchema
 class TemplateScoreEvidence:
     anchor_text_found: tuple[str, ...]
     anchor_text_missing: tuple[str, ...]
-    form_number_match: Optional[str]
+    form_number_match: str | None
     page_count: int
     page_count_in_range: bool
     region_bboxes_plausible: bool
@@ -58,7 +57,7 @@ def score_template(
     template: TemplateSchema,
     document_ir: DocumentIR,
     *,
-    ocr_confidence_average: Optional[float] = None,
+    ocr_confidence_average: float | None = None,
     fuzzy_threshold: float = DEFAULT_FUZZY_THRESHOLD,
     allow_fuzzy_anchors: bool = True,
 ) -> TemplateScore:
@@ -84,8 +83,8 @@ def score_template(
     )
     anchor_score = coverage.coverage_score
 
-    form_score: Optional[float] = None
-    form_match: Optional[str] = None
+    form_score: float | None = None
+    form_match: str | None = None
     if template.signature.form_number_regex:
         m = re.search(
             template.signature.form_number_regex, haystack, re.IGNORECASE

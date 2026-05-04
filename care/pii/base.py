@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from ..core.plugin_helpers import (
     assert_offline_config as _assert_offline_config,
+)
+from ..core.plugin_helpers import (
     evaluate_model_files_present,
 )
 from ..ocr.base import ProviderHealth
@@ -30,7 +32,7 @@ class PIIDetectionProvider(ABC):
 
     # See OCRProvider.accuracy_metrics for the schema. PII providers
     # typically populate ``per_entity`` with F1 per supported PII type.
-    accuracy_metrics: Optional[dict[str, Any]] = None
+    accuracy_metrics: dict[str, Any] | None = None
 
     @classmethod
     def assert_offline_config(cls, config: dict[str, Any]) -> None:
@@ -43,7 +45,7 @@ class PIIDetectionProvider(ABC):
         _assert_offline_config(cls.name, config)
 
     @classmethod
-    def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:
+    def model_files_present(cls, provider_cfg: dict[str, Any]) -> bool | None:
         return evaluate_model_files_present(
             provider_cfg,
             model_dir_keys=cls.MODEL_DIR_KEYS,

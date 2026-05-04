@@ -74,9 +74,9 @@ def _check_provider_imports() -> tuple[bool, list[str]]:
     populate without contacting the network."""
     issues: list[str] = []
     try:
+        from care.document_ai.registry import get_registry as get_vlm
         from care.ocr.registry import get_registry as get_ocr
         from care.pii.registry import get_registry as get_pii
-        from care.document_ai.registry import get_registry as get_vlm
 
         for reg_factory, label in (
             (get_ocr, "ocr"),

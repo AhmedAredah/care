@@ -10,7 +10,7 @@ Pure stdlib (argparse). Subcommands:
     serve                   — bind FastAPI to 127.0.0.1 (uvicorn required)
     app                     — desktop wrapper: serve + pywebview window
     compute-model-checksums — emit per-file SHA-256 of a local model dir
-    generate-sbom           — write a placeholder SBOM (Phase 7 fills this in)
+    generate-sbom           — emit the care SBOM (packages + model manifest + licenses)
     scan-frontend-assets    — scan frontend/ for external URLs
 
 Every command runs offline-by-default and never modifies inputs.
@@ -23,14 +23,14 @@ import json
 import os
 import re
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence
 
 from ..core.config import AppConfig, load_config
 from ..core.constants import APP_NAME, APP_VERSION, DEFAULT_HOST, DEFAULT_PORT, HF_OFFLINE_ENV
 
 
-def _load_config(path: Optional[str]) -> AppConfig:
+def _load_config(path: str | None) -> AppConfig:
     return load_config(path) if path else load_config()
 
 
@@ -358,7 +358,7 @@ def cmd_compute_model_checksums(args: argparse.Namespace) -> int:
 
 
 def cmd_generate_sbom(args: argparse.Namespace) -> int:
-    """Emit the care SBOM document (Phase 7).
+    """Emit the care SBOM document.
 
     Combines a Python package list, a per-provider model manifest, and a
     flat license report into one ``care.sbom.v1`` JSON
@@ -386,7 +386,7 @@ def cmd_generate_sbom(args: argparse.Namespace) -> int:
 
 
 def cmd_model_manifest(args: argparse.Namespace) -> int:
-    """Emit only the model-manifest section of the SBOM (Phase 7)."""
+    """Emit only the model-manifest section of the SBOM."""
     from ..audit import build_model_manifest
 
     cfg = _load_config(args.config) if args.config else None
@@ -858,7 +858,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run(argv: Optional[Sequence[str]] = None) -> int:
+def run(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     return int(args.func(args) or 0)

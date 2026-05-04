@@ -17,8 +17,8 @@ not the responsibility of this module.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Iterable, Optional, Union
+from collections.abc import Iterable
+from datetime import UTC, datetime
 
 from .. import __version__ as _CARE_VERSION
 from ..ocr.result import OCRResult
@@ -27,7 +27,7 @@ from .models import DocumentIR, Page, Provenance, Word
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def build_ocr_page(
@@ -77,7 +77,7 @@ def build_native_page(
     page_index: int,
     width: int,
     height: int,
-    words: list[Union[NativeTextWord, str]],
+    words: list[NativeTextWord | str],
 ) -> Page:
     """Construct a single native-text-sourced :class:`Page`.
 
@@ -130,7 +130,7 @@ def build_document_ir_from_pages(
     source_sha256: str,
     file_type: str,
     pages: list[Page],
-    extra_provenance: Optional[list[Provenance]] = None,
+    extra_provenance: list[Provenance] | None = None,
 ) -> DocumentIR:
     """Wrap pre-built :class:`Page` objects in a :class:`DocumentIR`.
 
@@ -228,7 +228,7 @@ def build_document_ir_from_native_text(
     source_sha256: str,
     file_type: str,
     page_dimensions: list[tuple[int, int]],
-    page_word_lists: list[list[Union[NativeTextWord, str]]],
+    page_word_lists: list[list[NativeTextWord | str]],
 ) -> DocumentIR:
     """Build a DocumentIR from native PDF text-layer extraction.
 

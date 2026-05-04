@@ -8,10 +8,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from ...ocr.base import ProviderHealth
 from ..base import PIIDetectionProvider
 from ..entities import PIIEntity
-from ...ocr.base import ProviderHealth
-
 
 _PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     ("PHONE_NUMBER", re.compile(r"\b\d{3}[-. ]?\d{3}[-. ]?\d{4}\b"), "regex_phone_us"),

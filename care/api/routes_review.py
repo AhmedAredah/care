@@ -7,8 +7,6 @@ by the fail-closed pipeline.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -20,8 +18,8 @@ router = APIRouter()
 
 
 class ReviewBody(BaseModel):
-    reviewer: Optional[str] = None
-    notes: Optional[str] = None
+    reviewer: str | None = None
+    notes: str | None = None
 
 
 @router.post("/reports/{report_id}/review/approve")
@@ -56,7 +54,7 @@ def reject_report(
     body: ReviewBody,
     store: JobStore = Depends(get_store),
 ) -> dict[str, object]:
-    view = _require_report(report_id, store)
+    _require_report(report_id, store)
     updated = store.set_review(
         report_id, decision="REJECTED", reviewer=body.reviewer, notes=body.notes
     )

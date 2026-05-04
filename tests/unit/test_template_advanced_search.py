@@ -32,7 +32,6 @@ from care.templates.schemas import (
     TemplateSchema,
 )
 
-
 # ----- helpers ------------------------------------------------------------
 
 
@@ -318,7 +317,7 @@ def test_narrative_shifted_search_can_skip_review_if_configured() -> None:
     # review (other reasons might still).
     assert all(
         not w.startswith("REGION_SHIFTED_PAGE")
-        or result.requires_review == True  # ambiguity or anchor miss may still trigger
+        or result.requires_review  # ambiguity or anchor miss may still trigger
         for w in result.warnings
     )
 

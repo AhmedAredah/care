@@ -39,8 +39,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
+from ..core.plugin_helpers import (
+    assert_offline_config as _assert_offline_config,
+)
 from ..ocr.base import ProviderHealth
 
 PROVIDER_TYPES: frozenset[str] = frozenset({
@@ -62,11 +65,11 @@ class LLMResult:
     converts them to flags downstream.
     """
 
-    text: Optional[str] = None
-    structured: Optional[dict[str, Any]] = None
+    text: str | None = None
+    structured: dict[str, Any] | None = None
     provider: str = ""
     model: str = ""
-    finish_reason: Optional[str] = None
+    finish_reason: str | None = None
     usage: dict[str, int] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     requires_review: bool = True
@@ -120,7 +123,20 @@ class LLMProvider(ABC):
     # See ``care.ocr.base.OCRProvider.accuracy_metrics`` for the schema.
     # Cloud LLMs are typically Tier C; local LLMs may be Tier B if the
     # underlying model has a published in-domain eval.
-    accuracy_metrics: Optional[dict[str, Any]] = None
+    accuracy_metrics: dict[str, Any] | None = None
+
+    @classmethod
+    def assert_offline_config(cls, config: dict[str, Any]) -> None:
+        """Reject any config that opts a local provider into network access.
+
+        Same contract as the OCR / PII / DocumentAI layers — concrete
+        local providers (``hf_local``, ``ollama``, etc.) call this as
+        the first line of ``load()``. Cloud providers do not call this:
+        they require network by design and run their own offline-mode
+        rejection in ``load()``.
+        """
+        name = cls.provider_name or cls.__name__.lower()
+        _assert_offline_config(name, config)
 
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None:
@@ -168,8 +184,8 @@ class LLMProvider(ABC):
         self,
         prompt: str,
         *,
-        system: Optional[str] = None,
-        json_schema: Optional[dict[str, Any]] = None,
+        system: str | None = None,
+        json_schema: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMResult:
         raise NotImplementedError(
@@ -181,7 +197,7 @@ class LLMProvider(ABC):
         image_path: str,
         prompt: str,
         *,
-        json_schema: Optional[dict[str, Any]] = None,
+        json_schema: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMResult:
         raise NotImplementedError(
@@ -193,7 +209,7 @@ class LLMProvider(ABC):
         document_path: str,
         prompt: str,
         *,
-        json_schema: Optional[dict[str, Any]] = None,
+        json_schema: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMResult:
         raise NotImplementedError(

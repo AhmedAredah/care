@@ -19,15 +19,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from care.core.constants import BLOCKING_QA_FLAGS
 from care.document_ai.base import (
     DocumentAIProvider,
     DocumentAIResult,
     MarkdownResult,
     ProviderHealth,
-    SpatialTextResult,
 )
 from care.extraction.vlm_diagram_review import vlm_disagrees_with_diagram
 

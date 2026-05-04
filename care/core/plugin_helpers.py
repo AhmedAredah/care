@@ -17,9 +17,11 @@ isn't reimplemented in eight provider modules.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
+from .constants import HF_OFFLINE_ENV
 from .errors import ConfigError
 from .paths import normalize_input_path
 
@@ -41,6 +43,25 @@ def assert_offline_config(provider_name: str, config: dict[str, Any]) -> None:
     if not config.get("local_files_only", True):
         raise ConfigError(f"{provider_name}.local_files_only must be true")
 
+
+def apply_hf_offline_env(*, force: bool = True) -> None:
+    """Apply the Hugging Face / Transformers offline env-var set.
+
+    Defaults to ``force=True``: every real plugin's ``load()`` re-pins
+    the env so a misbehaving test or CLI invocation that flipped a
+    value mid-process can't slip past the offline guard. The startup
+    guard (:func:`care.core.offline_guard.enable`) calls this with
+    ``force=False`` so it doesn't overwrite operator-set values at
+    process start — by the time a plugin loads, the only acceptable
+    state is the pinned one.
+    """
+    if force:
+        for key, value in HF_OFFLINE_ENV.items():
+            os.environ[key] = value
+    else:
+        for key, value in HF_OFFLINE_ENV.items():
+            os.environ.setdefault(key, value)
+
 _GLOB_CHARS = frozenset("*?[")
 
 
@@ -49,7 +70,7 @@ def evaluate_model_files_present(
     *,
     model_dir_keys: tuple[str, ...],
     weight_markers: tuple[str, ...],
-) -> Optional[bool]:
+) -> bool | None:
     """Return whether a provider's configured model directories look populated.
 
     - ``None`` — provider declares no ``model_dir_keys`` (pure-Python

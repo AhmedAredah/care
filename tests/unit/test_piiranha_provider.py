@@ -37,7 +37,6 @@ from care.pii.providers.optional_piiranha_provider import (
     PiiranhaPIIProvider,
 )
 
-
 # ----- helpers ----------------------------------------------------------
 
 

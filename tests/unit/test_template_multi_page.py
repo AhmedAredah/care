@@ -30,7 +30,6 @@ from care.templates.schemas import (
     TemplateSchema,
 )
 
-
 # ----- schema tests --------------------------------------------------------
 
 

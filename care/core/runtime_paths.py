@@ -50,7 +50,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 _log = logging.getLogger(__name__)
 
@@ -107,8 +106,8 @@ def _detect_platform() -> str:
 
 def user_data_root(
     *,
-    override: Optional[Path] = None,
-    platform_tag: Optional[str] = None,
+    override: Path | None = None,
+    platform_tag: str | None = None,
 ) -> Path:
     """Per-user data root.
 
@@ -132,7 +131,7 @@ def user_data_root(
     return Path(base) / _APP_DIR_LINUX
 
 
-def user_documents_root(*, override: Optional[Path] = None) -> Path:
+def user_documents_root(*, override: Path | None = None) -> Path:
     """User-discoverable output dir (under Documents on every platform)."""
     if override is not None:
         return Path(override).resolve()
@@ -203,35 +202,35 @@ def _windows_known_folder_documents() -> Path:
 # ----- subdir helpers --------------------------------------------------
 
 
-def config_dir(*, override: Optional[Path] = None) -> Path:
+def config_dir(*, override: Path | None = None) -> Path:
     return user_data_root(override=override) / SUBDIR_CONFIG
 
 
-def secrets_dir(*, override: Optional[Path] = None) -> Path:
+def secrets_dir(*, override: Path | None = None) -> Path:
     return user_data_root(override=override) / SUBDIR_SECRETS
 
 
-def templates_user_dir(*, override: Optional[Path] = None) -> Path:
+def templates_user_dir(*, override: Path | None = None) -> Path:
     return user_data_root(override=override) / SUBDIR_TEMPLATES
 
 
-def models_dir(*, override: Optional[Path] = None) -> Path:
+def models_dir(*, override: Path | None = None) -> Path:
     return user_data_root(override=override) / SUBDIR_MODELS
 
 
-def work_dir(*, override: Optional[Path] = None) -> Path:
+def work_dir(*, override: Path | None = None) -> Path:
     return user_data_root(override=override) / SUBDIR_WORK
 
 
-def logs_dir(*, override: Optional[Path] = None) -> Path:
+def logs_dir(*, override: Path | None = None) -> Path:
     return user_data_root(override=override) / SUBDIR_LOGS
 
 
-def exports_dir(*, override: Optional[Path] = None) -> Path:
+def exports_dir(*, override: Path | None = None) -> Path:
     return user_documents_root(override=override) / SUBDIR_EXPORTS
 
 
-def all_subdirs(*, override: Optional[Path] = None) -> dict[str, Path]:
+def all_subdirs(*, override: Path | None = None) -> dict[str, Path]:
     """Return every managed dir keyed by its short name."""
     return {
         SUBDIR_CONFIG: config_dir(override=override),
@@ -246,15 +245,15 @@ def all_subdirs(*, override: Optional[Path] = None) -> dict[str, Path]:
 # ----- bootstrap (first-run defaults) ---------------------------------
 
 
-def is_first_run(*, override: Optional[Path] = None) -> bool:
+def is_first_run(*, override: Path | None = None) -> bool:
     """True iff user-data dir doesn't have a config file yet."""
     return not (config_dir(override=override) / "config.yaml").exists()
 
 
 def bootstrap_user_data(
     *,
-    override: Optional[Path] = None,
-    bundle_root: Optional[Path] = None,
+    override: Path | None = None,
+    bundle_root: Path | None = None,
     seed_config_name: str = "config.yaml",
 ) -> dict[str, Path]:
     """Create user-data subdirs + seed config from the bundle.

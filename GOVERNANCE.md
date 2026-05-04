@@ -194,164 +194,188 @@ Important rule about Kosmos-2.5 and other VLMs:
 REPOSITORY STRUCTURE
 ============================================================
 
-Create this repository structure:
+The canonical repository layout is:
 
-care/
+repo-root/
   README.md
   LICENSE
   pyproject.toml
-  requirements.lock
+  uv.lock
   .gitignore
-  .env.example
+  config.yaml
 
-  backend/
-    app/
+  care/
+    __init__.py
+    main.py
+
+    api/
+      __init__.py
+      routes_health.py
+      routes_jobs.py
+      routes_reports.py
+      routes_exports.py
+      routes_plugins.py
+      routes_review.py
+      routes_offline.py
+
+    cli/
       __init__.py
       main.py
+      desktop.py
+      shortcut.py
 
-      api/
-        __init__.py
-        routes_health.py
-        routes_jobs.py
-        routes_reports.py
-        routes_exports.py
-        routes_plugins.py
-        routes_review.py
+    core/
+      __init__.py
+      config.py
+      logging.py
+      errors.py
+      security.py
+      offline_guard.py
+      governance_guard.py
+      plugin_helpers.py
+      paths.py
+      constants.py
 
-      cli/
-        __init__.py
-        main.py
+    ingestion/
+      __init__.py
+      scanner.py
+      file_manifest.py
+      hashing.py
+      supported_files.py
 
-      core/
-        __init__.py
-        config.py
-        logging.py
-        errors.py
-        security.py
-        offline_guard.py
-        paths.py
-        constants.py
+    pdf/
+      __init__.py
+      base.py
+      pypdfium2_backend.py
+      text_layer.py
+      renderer.py
+      inspection.py
 
-      ingestion/
+    ocr/
+      __init__.py
+      base.py
+      registry.py
+      result.py
+      providers/
         __init__.py
-        scanner.py
-        file_manifest.py
-        hashing.py
-        supported_files.py
+        mock_ocr_provider.py
+        paddleocr_provider.py
+        tesseract_provider.py
+        onnxtr_provider.py
+        noop_provider.py
 
-      pdf/
+    document_ai/
+      __init__.py
+      base.py
+      registry.py
+      result.py
+      providers/
         __init__.py
-        base.py
-        pypdfium2_backend.py
-        text_layer.py
-        renderer.py
-        inspection.py
+        mock_vlm_provider.py
+        kosmos25_provider.py
+        layoutlm_provider.py
 
-      ocr/
-        __init__.py
-        base.py
-        registry.py
-        result.py
-        providers/
-          __init__.py
-          mock_ocr_provider.py
-          paddleocr_provider.py
-          tesseract_provider.py
-          noop_provider.py
+    document_ir/
+      __init__.py
+      models.py
+      builder.py
+      reading_order.py
+      serialization.py
+      reconcile.py
+      provenance.py
 
-      document_ai/
-        __init__.py
-        base.py
-        registry.py
-        result.py
-        providers/
-          __init__.py
-          mock_vlm_provider.py
-          kosmos25_provider.py
+    templates/
+      __init__.py
+      registry.py
+      detector.py
+      scoring.py
+      schemas.py
+      loader.py
 
-      document_ir/
-        __init__.py
-        models.py
-        builder.py
-        reading_order.py
-        serialization.py
-        reconcile.py
-        provenance.py
+    extraction/
+      __init__.py
+      diagram_extractor.py
+      narrative_extractor.py
+      region_extractor.py
+      anchors.py
 
-      templates/
+    pii/
+      __init__.py
+      base.py
+      registry.py
+      entities.py
+      policies.py
+      merge.py
+      _hf_token_classification.py
+      providers/
         __init__.py
-        registry.py
-        detector.py
-        scoring.py
-        schemas.py
-        loader.py
+        regex_provider.py
+        presidio_provider.py
+        optional_piiranha_provider.py
+        roberta_ner_provider.py
+        mock_pii_provider.py
+      recognizers/
+        __init__.py
+        vin.py
+        license_plate.py
+        driver_license.py
+        phone.py
+        email.py
+        address.py
+        date_of_birth.py
+        report_number.py
+        case_number.py
+        insurance_policy.py
+        person_name.py
+        signature.py
+        medical_info.py
 
-      extraction/
+    llm/
+      __init__.py
+      base.py
+      registry.py
+      safety.py
+      providers/
         __init__.py
-        diagram_extractor.py
-        narrative_extractor.py
-        region_extractor.py
-        anchors.py
+        openai_provider.py
+        anthropic_provider.py
+        gemini_provider.py
+        hf_local_provider.py
+        ollama_provider.py
 
-      pii/
-        __init__.py
-        base.py
-        registry.py
-        entities.py
-        policies.py
-        merge.py
-        providers/
-          __init__.py
-          regex_provider.py
-          presidio_provider.py
-          optional_piiranha_provider.py
-          mock_pii_provider.py
-        recognizers/
-          __init__.py
-          vin.py
-          license_plate.py
-          driver_license.py
-          phone.py
-          email.py
-          address.py
-          date_of_birth.py
-          report_number.py
-          case_number.py
-          insurance_policy.py
-          person_name.py
-          signature.py
-          medical_info.py
+    redaction/
+      __init__.py
+      text_redactor.py
+      image_redactor.py
+      bbox_mapper.py
+      policies.py
+      audit.py
 
-      redaction/
-        __init__.py
-        text_redactor.py
-        image_redactor.py
-        bbox_mapper.py
-        policies.py
-        audit.py
+    export/
+      __init__.py
+      exporter.py
+      manifest.py
+      writers.py
 
-      export/
-        __init__.py
-        exporter.py
-        manifest.py
-        writers.py
+    review/
+      __init__.py
+      qa_flags.py
+      confidence.py
+      review_models.py
 
-      review/
-        __init__.py
-        qa_flags.py
-        confidence.py
-        review_models.py
+    workers/
+      __init__.py
+      pipeline.py
+      job_store.py
+      status.py
 
-      workers/
-        __init__.py
-        pipeline.py
-        job_store.py
-        status.py
+    audit/
+      __init__.py
+      events.py
+      sbom_notes.py
 
-      audit/
-        __init__.py
-        events.py
-        sbom_notes.py
+    services/
+      __init__.py
 
   frontend/
     index.html
@@ -383,19 +407,23 @@ care/
         README.md
       piiranha/
         README.md
+      roberta-large-ner-english/
+        README.md
     document_ai/
       README.md
       kosmos-2.5/
+        README.md
+      layoutlm/
         README.md
 
   tests/
     unit/
     integration/
+    api/
     offline/
-    fixtures/
-      synthetic_reports/
-      synthetic_images/
-      templates/
+    governance/
+    _fixtures.py
+    conftest.py
 
   docs/
     architecture.md
@@ -409,6 +437,7 @@ care/
     document-ai-plugins.md
     evaluation.md
     deployment.md
+    deployment-windows.md
     packaging.md
     license-and-model-governance.md
 
@@ -419,6 +448,11 @@ care/
     package_offline_installer.sh
     compute_model_checksums.py
     scan_frontend_external_assets.py
+    governance_check.py
+    codeql_dismiss_path_injection.sh
+    generate_icon.py
+
+The Python package is named ``care`` and lives at the repo root (no ``backend/app/`` wrapper). Plugin categories may grow over time — additions appear under the matching ``care/<category>/providers/`` directory, with each provider declaring its own model dir under ``models/<category>/<provider>/`` per :ref:`License and Model Governance`.
 
 Do not include real crash reports or real PII in the repository. Use synthetic fixtures only.
 
@@ -1993,6 +2027,4 @@ All real model providers must be optional, local-only, plugin-based, and safe to
 
 The default demo must run fully offline using synthetic fixtures and mock/local providers.
 
-The core architecture must make it easy for a DOT to add its own OCR model, PII model, VLM document reader, P
-::contentReference[oaicite:2]{index=2}
-DF backend, or template detector without rewriting the pipeline.
+The core architecture must make it easy for a DOT to add its own OCR model, PII model, VLM document reader, PDF backend, or template detector without rewriting the pipeline.

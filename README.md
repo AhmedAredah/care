@@ -24,7 +24,7 @@ CARE turns piles of police crash report PDFs into structured, **redacted** resea
 1. **Ingests** PDFs and scanned images, hashes every input, never modifies originals.
 2. **Detects** the report template (state-and-version specific YAML).
 3. **Extracts** the crash diagram (cropped image) and the officer's narrative (text + structured fields).
-4. **Redacts** every PII shape it finds — names, addresses, phones, VINs, plates, DOBs, license numbers, signatures, medical info — using a layered chain (regex → Presidio → optional ML models).
+4. **Redacts** every PII shape it finds — names, addresses, phones, VINs, plates, DOBs, license numbers, signatures, medical info. The default chain is `regex` only; operators add Presidio and ML providers (Piiranha, RoBERTa-NER) opt-in after license review.
 5. **Exports** only the safe artifacts (redacted diagram, redacted narrative, manifests, QA report). Originals never leave the working directory.
 
 If anything is unclear — unknown template, low OCR confidence, VLM output that doesn't agree with OCR, PII the redactor can't map back to image pixels — **the export is blocked** and the job is flagged for human review.
@@ -94,9 +94,7 @@ Crash reports are *scanned printed forms*, sometimes with a *handwritten* office
 |---|---|---|
 | **OnnxTR** *(recommended)* | Printed forms, degraded scans | Default choice. Best on FUNSD-style forms, best on noisy scans, no PyTorch dependency, ~400 MB. |
 | Tesseract | Mediocre everywhere | You need a system-wide binary already installed and don't care about peak accuracy. |
-| TrOCR-handwritten | Handwritten narrative only | You hit a jurisdiction with heavy handwritten content. Opt-in, slow, ~2 GB extra. |
 | PaddleOCR | Receipts, scene text | Don't. Catastrophic on noisy scans (≈3 % accuracy). Stays in the registry only for parity. |
-| EasyOCR | Scene/street photos | Don't. Strong on photos of street signs; mediocre on the documents you're actually feeding it. |
 
 If your inputs are clean digital PDFs with a real text layer, CARE skips OCR entirely and reads the native text — no engine choice needed.
 

@@ -1,7 +1,7 @@
 """Deterministic mock LLM provider for tests."""
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from ...ocr.base import ProviderHealth
 from ..base import LLMProvider, LLMResult
@@ -55,8 +55,8 @@ class MockLLMProvider(LLMProvider):
         self,
         prompt: str,
         *,
-        system: Optional[str] = None,
-        json_schema: Optional[dict[str, Any]] = None,
+        system: str | None = None,
+        json_schema: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMResult:
         text = str(self._fixture.get("text", f"mock response: {prompt[:48]}"))
@@ -73,7 +73,7 @@ class MockLLMProvider(LLMProvider):
         image_path: str,
         prompt: str,
         *,
-        json_schema: Optional[dict[str, Any]] = None,
+        json_schema: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMResult:
         return LLMResult(

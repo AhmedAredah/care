@@ -3,13 +3,18 @@ name: CodeQL
 # CodeQL advanced setup for CARE.
 #
 # Why advanced (not default) setup:
-#   * We register custom path-injection sanitizers via Models-as-Data
-#     (.github/codeql/extensions) so CodeQL recognises safe_join and
-#     normalize_input_path as taint barriers. Default setup cannot
-#     load model packs.
-#   * We pin the query suite, exclude generated/test paths, and keep
-#     the workflow under source control so reviewers can see exactly
-#     what is scanned and how.
+#   * We pin a non-default query suite (security-extended catches
+#     taint classes the default suite skips).
+#   * We exclude generated/test paths from extraction.
+#   * We keep the configuration under source control so reviewers can
+#     see exactly what is scanned and how.
+#
+# Note: an earlier iteration registered custom path-injection
+# sanitizers via Models-as-Data (.github/codeql/extensions). They were
+# removed because CodeQL's py/path-injection query uses a QL
+# PathSanitizer class hierarchy that is not extensible via MaD. Open
+# alerts are dismissed with rationale instead — see
+# .github/codeql/README.md "How path-injection alerts are handled".
 #
 # This workflow takes precedence over the repository's default-setup
 # CodeQL configuration when present. The default setup must also be

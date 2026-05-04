@@ -27,7 +27,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from ..core.config import AppConfig, load_config
 from ..core.errors import ConfigError
@@ -36,17 +35,21 @@ from ..document_ai.base import DocumentAIProvider
 from ..document_ai.registry import get_registry as get_vlm_registry
 from ..document_ir import DocumentIR
 from ..document_ir.builder import (
-    build_document_ir_from_native_text,
     build_document_ir_from_ocr,
     build_document_ir_from_pages,
     build_native_page,
     build_ocr_page,
 )
 from ..document_ir.models import (
-    AlternativeSource,
     Page as IRPage,
+)
+from ..document_ir.models import (
     Provenance,
+)
+from ..document_ir.models import (
     Warning as IRWarning,
+)
+from ..document_ir.models import (
     Word as IRWord,
 )
 from ..document_ir.reconcile import (
@@ -95,17 +98,17 @@ class ReportArtifact:
     document_ir: DocumentIR
     text_source: str  # "native" | "ocr" | "mixed"
     template_match: TemplateMatch
-    diagram: Optional[DiagramExtraction]
-    narrative: Optional[NarrativeExtraction]
+    diagram: DiagramExtraction | None
+    narrative: NarrativeExtraction | None
     qa: QAReport
     pii_entities_pages: list[PIIEntity] = field(default_factory=list)
     pii_entities_narrative: list[PIIEntity] = field(default_factory=list)
-    ocr_provider_used: Optional[str] = None
+    ocr_provider_used: str | None = None
     vlm_warnings: list[IRWarning] = field(default_factory=list)
-    export_result: Optional[ExportResult] = None
+    export_result: ExportResult | None = None
     export_blocked: bool = True
     blocking_reasons: list[str] = field(default_factory=list)
-    work_dir: Optional[str] = None
+    work_dir: str | None = None
 
 
 @dataclass
@@ -282,7 +285,7 @@ def _build_vlm_alternative_doc(
 
 def _run_pii_chain(
     document_ir: DocumentIR,
-    narrative: Optional[NarrativeExtraction],
+    narrative: NarrativeExtraction | None,
     providers: list[PIIDetectionProvider],
 ) -> tuple[list[PIIEntity], list[PIIEntity]]:
     page_entities: list[PIIEntity] = []
@@ -339,7 +342,7 @@ def _process_one(
     doc_work = work_root / entry.sha256
 
     rendered: list[RenderedPage] = []
-    ocr_provider_used: Optional[str] = None
+    ocr_provider_used: str | None = None
 
     # Per-page text-source routing. The inspection populates
     # ``page_has_text`` so we can take the native path for pages with
@@ -517,8 +520,8 @@ def _process_one(
 
     # ---- Phase 3: extraction -------------------------------------------
 
-    diagram: Optional[DiagramExtraction] = None
-    narrative: Optional[NarrativeExtraction] = None
+    diagram: DiagramExtraction | None = None
+    narrative: NarrativeExtraction | None = None
 
     if template_registry.has(template_match.template_id):
         template = template_registry.get(template_match.template_id)
@@ -575,7 +578,7 @@ def _process_one(
 
     # ---- Phase 4: export (only when QA allows) -------------------------
 
-    export_result: Optional[ExportResult] = None
+    export_result: ExportResult | None = None
     if not qa.export_blocked:
         export_result = export_artifact(
             artifact=_artifact_view(

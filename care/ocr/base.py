@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from ..core.plugin_helpers import (
     assert_offline_config as _assert_offline_config,
+)
+from ..core.plugin_helpers import (
     evaluate_model_files_present,
 )
 from .result import OCRResult
@@ -45,7 +47,7 @@ class OCRProvider(ABC):
     # Tier A = project-run benchmark on a held-out crash-report corpus;
     # B = published numbers in-domain; C = vendor / unverified. The UI
     # only ranks providers within the same tier.
-    accuracy_metrics: Optional[dict[str, Any]] = None
+    accuracy_metrics: dict[str, Any] | None = None
 
     @classmethod
     def assert_offline_config(cls, config: dict[str, Any]) -> None:
@@ -59,7 +61,7 @@ class OCRProvider(ABC):
         _assert_offline_config(cls.name, config)
 
     @classmethod
-    def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:
+    def model_files_present(cls, provider_cfg: dict[str, Any]) -> bool | None:
         return evaluate_model_files_present(
             provider_cfg,
             model_dir_keys=cls.MODEL_DIR_KEYS,

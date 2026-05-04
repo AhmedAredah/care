@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import json
 import re
 import sys
 from pathlib import Path
@@ -73,8 +72,6 @@ def check_default_config_safety() -> None:
     candidates = [
         ROOT / "config.yaml",
         ROOT / "config.yml",
-        ROOT / "backend" / "config.yaml",
-        ROOT / "backend" / "config.yml",
     ]
 
     existing = [p for p in candidates if p.exists()]
@@ -110,7 +107,7 @@ def check_default_config_safety() -> None:
 
 
 def check_no_public_export_of_originals() -> None:
-    export_files = list((ROOT / "backend" / "app" / "export").rglob("*.py"))
+    export_files = list((ROOT / "care" / "export").rglob("*.py"))
     for path in export_files:
         text = read(path).lower()
         suspicious = [
@@ -136,8 +133,8 @@ def check_desktop_module_no_external_urls() -> None:
         re.IGNORECASE,
     )
     targets = [
-        ROOT / "backend" / "app" / "cli" / "desktop.py",
-        ROOT / "backend" / "app" / "cli" / "shortcut.py",
+        ROOT / "care" / "cli" / "desktop.py",
+        ROOT / "care" / "cli" / "shortcut.py",
     ]
     for path in targets:
         if not path.exists():
@@ -215,8 +212,6 @@ def check_locked_keys() -> None:
     candidates = [
         ROOT / "config.yaml",
         ROOT / "config.yml",
-        ROOT / "backend" / "config.yaml",
-        ROOT / "backend" / "config.yml",
     ]
     for path in candidates:
         if not path.exists():

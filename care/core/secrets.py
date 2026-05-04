@@ -37,7 +37,7 @@ import os
 import re
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -235,7 +235,7 @@ def resolve_placeholders(value: Any, secrets: dict[str, str]) -> Any:
     return value
 
 
-def derive_name_for_path(dotted_path: str) -> Optional[str]:
+def derive_name_for_path(dotted_path: str) -> str | None:
     """Convention: ``llm.providers.openai.api_key`` → ``OPENAI_API_KEY``.
 
     Returns ``None`` for paths that don't match the

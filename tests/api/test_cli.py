@@ -11,7 +11,6 @@ from pathlib import Path
 from care.cli import run
 from tests._fixtures import (
     make_digital_pdf,
-    make_example_template_pdf,
     make_synthetic_image,
 )
 

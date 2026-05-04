@@ -37,7 +37,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.errors import ConfigError, OfflineGuardError
 from ..base import OCRProvider, ProviderHealth
@@ -116,10 +116,10 @@ class OnnxTROCRProvider(OCRProvider):
     def __init__(self) -> None:
         self._loaded = False
         self._predictor: Any = None
-        self._det_arch: Optional[str] = None
-        self._reco_arch: Optional[str] = None
-        self._det_path: Optional[Path] = None
-        self._reco_path: Optional[Path] = None
+        self._det_arch: str | None = None
+        self._reco_arch: str | None = None
+        self._det_path: Path | None = None
+        self._reco_path: Path | None = None
         self._low_confidence_threshold: float = 0.5
         self._manifest: dict[str, Any] = {}
 
@@ -338,7 +338,7 @@ class OnnxTROCRProvider(OCRProvider):
                 )
             )
 
-        page_confidence: Optional[float] = None
+        page_confidence: float | None = None
         if words:
             confidences = [w.confidence for w in words if w.confidence is not None]
             page_confidence = (

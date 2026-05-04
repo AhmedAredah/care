@@ -1,11 +1,9 @@
 """OCR provider registry.
 
 Only locally declared plugins are accepted. Unknown names are rejected
-unless explicitly registered. 
+unless explicitly registered.
 """
 from __future__ import annotations
-
-from typing import Type
 
 from ..core.errors import PluginNotFoundError
 from .base import OCRProvider
@@ -13,14 +11,14 @@ from .base import OCRProvider
 
 class OCRRegistry:
     def __init__(self) -> None:
-        self._providers: dict[str, Type[OCRProvider]] = {}
+        self._providers: dict[str, type[OCRProvider]] = {}
 
-    def register(self, name: str, provider_cls: Type[OCRProvider]) -> None:
+    def register(self, name: str, provider_cls: type[OCRProvider]) -> None:
         if not isinstance(provider_cls, type) or not issubclass(provider_cls, OCRProvider):
             raise TypeError(f"{provider_cls!r} is not an OCRProvider subclass")
         self._providers[name] = provider_cls
 
-    def get(self, name: str) -> Type[OCRProvider]:
+    def get(self, name: str) -> type[OCRProvider]:
         if name not in self._providers:
             raise PluginNotFoundError(
                 f"OCR provider '{name}' is not registered. "
@@ -51,8 +49,8 @@ def get_registry() -> OCRRegistry:
         _registry.register("mock_ocr", MockOCRProvider)
         _registry.register("noop", NoopOCRProvider)
         # Real OCR providers are registered but disabled-by-default; they
-        # only load when local model files are present (CONTRACT §License
-        # and Model Governance).
+        # only load when local model files are present (GOVERNANCE.md
+        # §License and Model Governance).
         _registry.register("paddleocr", PaddleOCRProvider)
         _registry.register("tesseract", TesseractProvider)
         _registry.register("onnxtr", OnnxTROCRProvider)

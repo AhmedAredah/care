@@ -34,7 +34,7 @@ def test_default_config_disables_optional_plugins() -> None:
 
 def test_governance_check_imports_runtime_immutable_table() -> None:
     """The script and routes_config.py must agree on which keys are
-    locked. A divergence is a CONTRACT enforcement gap."""
+    locked. A divergence is a GOVERNANCE.md enforcement gap."""
     import sys
 
     sys.path.insert(0, str(ROOT))

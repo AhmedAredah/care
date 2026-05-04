@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import cast
 
 import pypdfium2 as pdfium
 from PIL import Image

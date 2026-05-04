@@ -1,8 +1,6 @@
 """Common helpers for normalized-bbox → pixel conversion."""
 from __future__ import annotations
 
-from typing import Optional
-
 
 def bbox_norm_to_pixels(
     bbox_norm: list[float] | tuple[float, float, float, float],
@@ -18,7 +16,7 @@ def bbox_norm_to_pixels(
     )
 
 
-def is_valid_bbox_norm(bbox_norm: Optional[list[float] | tuple[float, ...]]) -> bool:
+def is_valid_bbox_norm(bbox_norm: list[float] | tuple[float, ...] | None) -> bool:
     if bbox_norm is None or len(bbox_norm) != 4:
         return False
     x0, y0, x1, y1 = bbox_norm

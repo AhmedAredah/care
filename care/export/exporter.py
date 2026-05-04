@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from PIL import Image
 
@@ -38,8 +38,8 @@ _log = logging.getLogger(__name__)
 class ExportResult:
     written: list[str] = field(default_factory=list)
     skipped: bool = False
-    skip_reason: Optional[str] = None
-    output_dir: Optional[str] = None
+    skip_reason: str | None = None
+    output_dir: str | None = None
 
 
 def _qa_to_dict(qa) -> dict:
@@ -56,7 +56,7 @@ def _qa_to_dict(qa) -> dict:
 
 
 def export_artifact(
-    artifact: "ReportArtifact",
+    artifact: ReportArtifact,
     *,
     pii_entities_pages: list[PIIEntity],
     pii_entities_narrative: list[PIIEntity],

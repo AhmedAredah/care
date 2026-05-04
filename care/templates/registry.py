@@ -1,7 +1,7 @@
 """Template registry."""
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from .schemas import TemplateSchema
 
@@ -37,9 +37,9 @@ class TemplateRegistry:
     def filter_by(
         self,
         *,
-        jurisdiction: Optional[str] = None,
-        template_ids: Optional[Iterable[str]] = None,
-    ) -> "TemplateRegistry":
+        jurisdiction: str | None = None,
+        template_ids: Iterable[str] | None = None,
+    ) -> TemplateRegistry:
         """Return a new registry restricted to a per-job allowlist.
 
         Both arguments are optional and additive (AND): a template must
@@ -51,7 +51,7 @@ class TemplateRegistry:
         works.
         """
         juris = (jurisdiction or "").strip() or None
-        ids: Optional[set[str]] = None
+        ids: set[str] | None = None
         if template_ids is not None:
             ids = {tid.strip() for tid in template_ids if tid and tid.strip()}
             if not ids:

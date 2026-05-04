@@ -17,7 +17,6 @@ from care.ingestion import (
 )
 from tests._fixtures import make_digital_pdf, make_synthetic_image
 
-
 # ---------- supported_files ----------
 
 

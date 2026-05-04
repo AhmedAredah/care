@@ -27,7 +27,6 @@ from care.api.routes_template_builder import (
     SourceRequest,
     create_source,
     delete_source,
-    get_source,
     get_source_page,
     preview,
     save_template,
@@ -40,7 +39,6 @@ from care.services.template_builder import (
     pixel_bbox_to_norm,
 )
 from tests._fixtures import make_digital_pdf, make_synthetic_image
-
 
 # ----- pixel-to-normalized-coord conversion -------------------------------
 

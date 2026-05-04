@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -148,7 +148,7 @@ def _build_default_config_paths() -> list[Path]:
 DEFAULT_CONFIG_PATHS: list[Path] = _build_default_config_paths()
 
 
-def load_config(path: Optional[os.PathLike[str] | str] = None) -> AppConfig:
+def load_config(path: os.PathLike[str] | str | None = None) -> AppConfig:
     """Load AppConfig from `path` or the first existing default location.
 
     Returns a default AppConfig (offline-on, mocks-as-default) when no file

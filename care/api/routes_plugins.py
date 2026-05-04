@@ -25,7 +25,7 @@ wired up:
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends
 
@@ -43,7 +43,7 @@ router = APIRouter()
 _ACCURACY_TIERS: frozenset[str] = frozenset({"A", "B", "C"})
 
 
-def _accuracy_payload(cls: Any) -> Optional[dict[str, Any]]:
+def _accuracy_payload(cls: Any) -> dict[str, Any] | None:
     """Return a sanitised copy of the provider's accuracy_metrics, or None.
 
     Drops the field entirely if the declared tier is unknown — better

@@ -16,9 +16,8 @@ from __future__ import annotations
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from ..core.config import AppConfig
 
@@ -28,9 +27,9 @@ JobStatus = str  # "pending" | "running" | "complete" | "failed"
 @dataclass
 class ReviewState:
     decision: str = "PENDING"  # "PENDING" | "APPROVED" | "REJECTED"
-    reviewer: Optional[str] = None
-    notes: Optional[str] = None
-    reviewed_at: Optional[str] = None
+    reviewer: str | None = None
+    notes: str | None = None
+    reviewed_at: str | None = None
 
 
 @dataclass
@@ -47,10 +46,10 @@ class ReportView:
     source_file_name: str
     file_type: str
     template_id: str
-    template_version: Optional[str]
+    template_version: str | None
     template_confidence: float
     text_source: str
-    ocr_provider_used: Optional[str]
+    ocr_provider_used: str | None
     qa_decision: str
     qa_export_blocked: bool
     qa_flags: list[str]
@@ -58,9 +57,9 @@ class ReportView:
     qa_requires_human_review: bool
     qa_pii_entity_count: int
     qa_pii_unmapped_count: int
-    diagram_confidence: Optional[float]
-    narrative_confidence: Optional[float]
-    export_dir: Optional[str]
+    diagram_confidence: float | None
+    narrative_confidence: float | None
+    export_dir: str | None
     review: ReviewState = field(default_factory=ReviewState)
     vlm_warning_codes: list[str] = field(default_factory=list)
 
@@ -70,22 +69,22 @@ class JobRecord:
     job_id: str
     status: JobStatus
     submitted_at: str
-    started_at: Optional[str] = None
-    finished_at: Optional[str] = None
-    input_dir: Optional[str] = None
-    error: Optional[str] = None
+    started_at: str | None = None
+    finished_at: str | None = None
+    input_dir: str | None = None
+    error: str | None = None
     report_ids: list[str] = field(default_factory=list)
-    template_filter: Optional[dict[str, Any]] = None
+    template_filter: dict[str, Any] | None = None
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class JobStore:
     """Thread-safe in-memory job + report registry."""
 
-    def __init__(self, config: Optional[AppConfig] = None) -> None:
+    def __init__(self, config: AppConfig | None = None) -> None:
         self._lock = threading.RLock()
         self._jobs: dict[str, JobRecord] = {}
         self._reports: dict[str, ReportView] = {}
@@ -96,8 +95,8 @@ class JobStore:
     def create_job(
         self,
         *,
-        input_dir: Optional[str] = None,
-        template_filter: Optional[dict[str, Any]] = None,
+        input_dir: str | None = None,
+        template_filter: dict[str, Any] | None = None,
     ) -> JobRecord:
         with self._lock:
             job_id = uuid.uuid4().hex[:16]
@@ -111,7 +110,7 @@ class JobStore:
             self._jobs[job_id] = record
             return record
 
-    def get_job(self, job_id: str) -> Optional[JobRecord]:
+    def get_job(self, job_id: str) -> JobRecord | None:
         with self._lock:
             return self._jobs.get(job_id)
 
@@ -145,7 +144,7 @@ class JobStore:
         with self._lock:
             self._reports[view.report_id] = view
 
-    def get_report(self, report_id: str) -> Optional[ReportView]:
+    def get_report(self, report_id: str) -> ReportView | None:
         with self._lock:
             return self._reports.get(report_id)
 
@@ -160,9 +159,9 @@ class JobStore:
         report_id: str,
         *,
         decision: str,
-        reviewer: Optional[str] = None,
-        notes: Optional[str] = None,
-    ) -> Optional[ReportView]:
+        reviewer: str | None = None,
+        notes: str | None = None,
+    ) -> ReportView | None:
         if decision not in {"APPROVED", "REJECTED"}:
             raise ValueError(
                 f"review decision must be APPROVED or REJECTED, got {decision!r}"
@@ -182,7 +181,7 @@ class JobStore:
 
 # ----- module-level singleton -------------------------------------------
 
-_store: Optional[JobStore] = None
+_store: JobStore | None = None
 _store_lock = threading.Lock()
 
 
@@ -214,7 +213,7 @@ def report_view_from_artifact(artifact: Any) -> ReportView:
     """
     qa = artifact.qa
     short = artifact.file_entry.sha256[:16]
-    export_path: Optional[str] = None
+    export_path: str | None = None
     if artifact.export_result is not None and not artifact.export_result.skipped:
         export_path = artifact.export_result.output_dir
     vlm_codes = sorted({w.code for w in (artifact.vlm_warnings or [])})

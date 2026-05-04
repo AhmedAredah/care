@@ -7,10 +7,12 @@ silently drives image redaction or final narrative export.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from ..core.plugin_helpers import (
     assert_offline_config as _assert_offline_config,
+)
+from ..core.plugin_helpers import (
     evaluate_model_files_present,
 )
 from ..ocr.base import ProviderHealth
@@ -47,7 +49,7 @@ class DocumentAIProvider(ABC):
     # See OCRProvider.accuracy_metrics for the schema. VLM benchmarks
     # are typically Tier C (vendor / unverified) until a fair in-domain
     # eval set exists; the UI must show the tier badge.
-    accuracy_metrics: Optional[dict[str, Any]] = None
+    accuracy_metrics: dict[str, Any] | None = None
 
     @classmethod
     def assert_offline_config(cls, config: dict[str, Any]) -> None:
@@ -59,7 +61,7 @@ class DocumentAIProvider(ABC):
         _assert_offline_config(cls.name, config)
 
     @classmethod
-    def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:
+    def model_files_present(cls, provider_cfg: dict[str, Any]) -> bool | None:
         return evaluate_model_files_present(
             provider_cfg,
             model_dir_keys=cls.MODEL_DIR_KEYS,

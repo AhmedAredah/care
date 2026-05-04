@@ -25,18 +25,18 @@ Existing single-page templates remain valid without modification.
 """
 from __future__ import annotations
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-PageSpec = Union[int, list[int], Literal["any"]]
+PageSpec = int | list[int] | Literal["any"]
 PageSearchStrategy = Literal["first_match", "best_match", "fixed", "any"]
 
 
 # ----- shared validators ---------------------------------------------------
 
 
-def _validate_bbox_norm(value: Optional[list[float]]) -> Optional[list[float]]:
+def _validate_bbox_norm(value: list[float] | None) -> list[float] | None:
     if value is None:
         return value
     if len(value) != 4:
@@ -91,7 +91,7 @@ def _validate_page_spec(value):
 class TemplateSignature(BaseModel):
     model_config = ConfigDict(extra="forbid")
     anchor_text: list[str] = Field(default_factory=list)
-    form_number_regex: Optional[str] = None
+    form_number_regex: str | None = None
 
 
 class TemplateLayout(BaseModel):
@@ -169,11 +169,11 @@ class ContinuationSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     pages: PageSpec = "any"
-    anchor_end: Optional[str] = None
-    bbox_norm: Optional[list[float]] = None
+    anchor_end: str | None = None
+    bbox_norm: list[float] | None = None
     continue_until_anchor_found: bool = True
     max_continuation_pages: int = 3
-    stop_at_next_section_anchor: Optional[Union[str, list[str]]] = None
+    stop_at_next_section_anchor: str | list[str] | None = None
     require_review_if_anchor_end_missing: bool = True
 
     @field_validator("pages", mode="before")
@@ -183,7 +183,7 @@ class ContinuationSpec(BaseModel):
 
     @field_validator("bbox_norm")
     @classmethod
-    def _check_bbox(cls, value: Optional[list[float]]) -> Optional[list[float]]:
+    def _check_bbox(cls, value: list[float] | None) -> list[float] | None:
         return _validate_bbox_norm(value)
 
     @field_validator("max_continuation_pages")
@@ -225,14 +225,14 @@ class TemplateRegion(BaseModel):
     # ``page`` is the canonical candidate-page selector. Can be a
     # single int (pinned), a list of ints (priority order), the
     # string "any" (every page), or a full PageSearch object.
-    page: Union[int, list[int], Literal["any"], PageSearch] = 0
-    bbox_norm: Optional[list[float]] = None
-    anchor_start: Optional[str] = None
-    anchor_end: Optional[str] = None
+    page: int | list[int] | Literal["any"] | PageSearch = 0
+    bbox_norm: list[float] | None = None
+    anchor_start: str | None = None
+    anchor_end: str | None = None
     requires_redaction: bool = False
-    continuation: Optional[ContinuationSpec] = None
-    shifted_region_search: Optional[ShiftedRegionSearch] = None
-    diagram_continuation: Optional[DiagramContinuation] = None
+    continuation: ContinuationSpec | None = None
+    shifted_region_search: ShiftedRegionSearch | None = None
+    diagram_continuation: DiagramContinuation | None = None
 
     @field_validator("page", mode="before")
     @classmethod
@@ -241,7 +241,7 @@ class TemplateRegion(BaseModel):
 
     @field_validator("bbox_norm")
     @classmethod
-    def _check_bbox(cls, value: Optional[list[float]]) -> Optional[list[float]]:
+    def _check_bbox(cls, value: list[float] | None) -> list[float] | None:
         return _validate_bbox_norm(value)
 
     def page_search(self) -> PageSearch:
@@ -254,7 +254,7 @@ class TemplateRegion(BaseModel):
             return PageSearch(candidate_pages="any", search_strategy="best_match")
         return PageSearch(candidate_pages=[int(self.page)], search_strategy="fixed")
 
-    def candidate_pages(self, *, page_count: Optional[int] = None) -> list[int]:
+    def candidate_pages(self, *, page_count: int | None = None) -> list[int]:
         """Return concrete candidate page indices, expanding ``"any"``
         against ``page_count`` if provided. Without ``page_count`` the
         list is returned in declared order; ``"any"`` collapses to an
@@ -271,11 +271,11 @@ class TemplateRegion(BaseModel):
 class TemplateSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
     template_id: str
-    jurisdiction: Optional[str] = None
-    agency: Optional[str] = None
+    jurisdiction: str | None = None
+    agency: str | None = None
     version: str = "0"
-    description: Optional[str] = None
-    extends: Optional[str] = None
+    description: str | None = None
+    extends: str | None = None
     signature: TemplateSignature = Field(default_factory=TemplateSignature)
     layout: TemplateLayout = Field(default_factory=TemplateLayout)
     regions: dict[str, TemplateRegion] = Field(default_factory=dict)

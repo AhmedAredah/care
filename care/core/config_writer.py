@@ -31,9 +31,9 @@ import re
 import shutil
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
@@ -60,7 +60,7 @@ def _make_yaml() -> YAML:
     return yaml
 
 
-def resolve_write_path(*, fallback_dir: Optional[Path] = None) -> Path:
+def resolve_write_path(*, fallback_dir: Path | None = None) -> Path:
     """Pick the file the GUI's Settings page writes to.
 
     1. The first existing path in ``DEFAULT_CONFIG_PATHS`` (matches
@@ -102,12 +102,12 @@ def _apply_patch_in_place(doc: Any, patch: dict[str, Any]) -> None:
 
 
 def _format_timestamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _backup_existing(
-    target: Path, *, max_backups: Optional[int] = None
-) -> Optional[Path]:
+    target: Path, *, max_backups: int | None = None
+) -> Path | None:
     """Copy ``target`` to a timestamped sibling and prune old backups.
 
     Returns the new backup path, or ``None`` when the target doesn't
@@ -156,7 +156,7 @@ def _atomic_replace(tmp: Path, target: Path) -> None:
     # shutil.copy2 we just did for backup) can hold a transient lock on
     # ``target`` and make ``os.replace`` raise WinError 5. Retry briefly
     # with backoff before giving up.
-    last_exc: Optional[OSError] = None
+    last_exc: OSError | None = None
     for delay in (0.0, 0.02, 0.05, 0.1, 0.2):
         if delay:
             time.sleep(delay)
@@ -189,7 +189,7 @@ def _atomic_write(target: Path, doc: Any, yaml: YAML) -> None:
 def save_patch(
     patch: dict[str, Any],
     *,
-    target: Optional[Path] = None,
+    target: Path | None = None,
 ) -> dict[str, Any]:
     """Apply ``patch`` to the on-disk config and return an audit dict.
 

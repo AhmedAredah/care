@@ -46,7 +46,7 @@ This is the right choice for the air-gap-friendly default.
 - The `hf_local` LLM provider
 
 The ML flavour does **not** enable any of these models by default.
-Defaults still meet the CONTRACT: offline, no cloud, no telemetry.
+Defaults still meet GOVERNANCE.md: offline, no cloud, no telemetry.
 What changes is that the model wheels are *available* if the operator
 later decides to enable them in Settings.
 

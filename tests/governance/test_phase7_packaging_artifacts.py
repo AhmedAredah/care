@@ -1,9 +1,6 @@
 """Policy-level tests for Phase 7 packaging artifacts."""
 from __future__ import annotations
 
-import json
-import os
-import stat
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

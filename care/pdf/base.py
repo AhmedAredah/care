@@ -4,7 +4,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -42,7 +41,7 @@ class RenderedPage:
 class NativeTextWord:
     page_index: int
     text: str
-    bbox: Optional[list[float]] = None
+    bbox: list[float] | None = None
     # Native PDF text comes from the document author's own text layer
     # (pypdfium2's textpage), so it is treated as ground-truth and
     # carries confidence=1.0 by convention. Downstream code that
@@ -79,5 +78,5 @@ class PDFImageBackend(ABC):
         file_path: Path,
         output_dir: Path,
         dpi: int = 200,
-        page_indices: Optional[list[int]] = None,
+        page_indices: list[int] | None = None,
     ) -> list[RenderedPage]: ...

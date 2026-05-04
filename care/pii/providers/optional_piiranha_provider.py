@@ -16,7 +16,7 @@ provider:
 2. Looks the label up in :data:`DEFAULT_LABEL_MAP` (operator-overridable
    via ``config["label_map"]``).
 3. Routes unknown labels to ``CASE_NUMBER`` (a catch-all sensitive-id
-   placeholder — recall over precision per CONTRACT §PII Plugin
+   placeholder — recall over precision per GOVERNANCE.md §PII Plugin
    Interface).
 4. Emits one :class:`PIIEntity` per merged span with offsets,
    confidence, ``provider="piiranha"``, and ``requires_review=True``.
@@ -40,9 +40,8 @@ fallback, and the license-review warning.
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.constants import HF_OFFLINE_ENV
 from ...core.errors import ConfigError
@@ -109,7 +108,7 @@ class PiiranhaPIIProvider(HFTokenClassificationMixin, PIIDetectionProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._model_dir: Optional[Path] = None
+        self._model_dir: Path | None = None
         self._pipeline: Any = None
         self._label_map: dict[str, str] = dict(DEFAULT_LABEL_MAP)
         self._min_confidence: float = 0.4
@@ -169,10 +168,10 @@ class PiiranhaPIIProvider(HFTokenClassificationMixin, PIIDetectionProvider):
     ) -> list[PIIEntity]:
         return self._run_inference(text)
 
-    def _map_label(self, label: str) -> Optional[str]:
+    def _map_label(self, label: str) -> str | None:
         """Piiranha's policy: unknown labels fall back to
         ``CASE_NUMBER`` rather than being dropped — recall over
-        precision per CONTRACT §PII Plugin Interface."""
+        precision per GOVERNANCE.md §PII Plugin Interface."""
         return self._label_map.get(label.upper(), _FALLBACK_ENTITY_TYPE)
 
     # ----- introspection ---------------------------------------------

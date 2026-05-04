@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...core.errors import ConfigError
 from ...ocr.base import ProviderHealth
@@ -133,8 +133,8 @@ class OpenAIProvider(LLMProvider):
         self,
         prompt: str,
         *,
-        system: Optional[str] = None,
-        json_schema: Optional[dict[str, Any]] = None,
+        system: str | None = None,
+        json_schema: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMResult:
         self._require_loaded()
@@ -146,8 +146,8 @@ class OpenAIProvider(LLMProvider):
         image_path: str,
         prompt: str,
         *,
-        json_schema: Optional[dict[str, Any]] = None,
-        system: Optional[str] = None,
+        json_schema: dict[str, Any] | None = None,
+        system: str | None = None,
         **kwargs: Any,
     ) -> LLMResult:
         self._require_loaded()
@@ -172,7 +172,7 @@ class OpenAIProvider(LLMProvider):
 
     @staticmethod
     def _build_messages(
-        *, prompt: str, system: Optional[str]
+        *, prompt: str, system: str | None
     ) -> list[dict[str, Any]]:
         messages: list[dict[str, Any]] = []
         if system:
@@ -184,7 +184,7 @@ class OpenAIProvider(LLMProvider):
         self,
         *,
         messages: list[dict[str, Any]],
-        json_schema: Optional[dict[str, Any]],
+        json_schema: dict[str, Any] | None,
         **kwargs: Any,
     ) -> LLMResult:
         request: dict[str, Any] = {
@@ -233,7 +233,7 @@ def _response_to_llm_result(
     choice = choices[0]
     message = getattr(choice, "message", None)
     text = getattr(message, "content", None) if message is not None else None
-    structured: Optional[dict[str, Any]] = None
+    structured: dict[str, Any] | None = None
     warnings: list[str] = []
     if wants_structured and isinstance(text, str) and text:
         try:

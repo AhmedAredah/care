@@ -9,12 +9,11 @@ to enable network access.
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from ...core.constants import HF_OFFLINE_ENV
 from ...core.errors import ConfigError, OfflineGuardError
+from ...core.plugin_helpers import apply_hf_offline_env
 from ...ocr.base import ProviderHealth
 from ..base import PIIDetectionProvider
 from ..entities import PIIEntity
@@ -46,16 +45,11 @@ class PresidioPIIProvider(PIIDetectionProvider):
 
     def __init__(self) -> None:
         self._loaded = False
-        self._model_dir: Optional[Path] = None
+        self._model_dir: Path | None = None
         self._analyzer: Any = None
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError(
-                "presidio.allow_network must be false"
-            )
-        if not config.get("local_files_only", True):
-            raise ConfigError("presidio.local_files_only must be true")
+        self.assert_offline_config(config)
 
         model_dir = Path(config.get("model_dir") or "")
         if not model_dir or not model_dir.exists():
@@ -65,10 +59,7 @@ class PresidioPIIProvider(PIIDetectionProvider):
             )
         self._model_dir = model_dir
 
-        # Make sure HF env vars are set even if the global offline guard
-        # was not enabled before this provider loads.
-        for key, value in HF_OFFLINE_ENV.items():
-            os.environ.setdefault(key, value)
+        apply_hf_offline_env()
 
         try:
             import presidio_analyzer  # type: ignore[import-not-found]

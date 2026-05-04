@@ -7,16 +7,17 @@ abstract interfaces and registries declared in `care/`.
 
 ## Plugin categories
 
-| Category               | Base class                              | Registry                              |
-|------------------------|-----------------------------------------|---------------------------------------|
-| Traditional OCR        | `care.ocr.base.OCRProvider`      | `care.ocr.registry`            |
-| VLM / document-AI      | `care.document_ai.base.DocumentAIProvider` | `care.document_ai.registry` |
-| PII detection          | `care.pii.base.PIIDetectionProvider` | `care.pii.registry`        |
-| PDF / image backends   | `care.pdf.base.PDFImageBackend`  | (Phase 2)                             |
-| Templates              | YAML in `templates/`                    | `care.templates.registry` (Phase 3) |
-| Redactors              | `care.redaction` (Phase 4)       | (Phase 4)                             |
-| Exporters              | `care.export` (Phase 4)          | (Phase 4)                             |
-| QA / review policies   | `care.review` (Phase 3)          | (Phase 3)                             |
+| Category               | Base class                                  | Registry                       |
+|------------------------|---------------------------------------------|--------------------------------|
+| Traditional OCR        | `care.ocr.base.OCRProvider`                 | `care.ocr.registry`            |
+| VLM / document-AI      | `care.document_ai.base.DocumentAIProvider`  | `care.document_ai.registry`    |
+| PII detection          | `care.pii.base.PIIDetectionProvider`        | `care.pii.registry`            |
+| LLM (cloud + local)    | `care.llm.base.LLMProvider`                 | `care.llm.registry`            |
+| PDF / image backends   | `care.pdf.base.PDFImageBackend`             | `care.pdf` (module-level)      |
+| Templates              | YAML in `templates/`                        | `care.templates.registry`      |
+| Redactors              | `care.redaction`                            | `care.redaction`               |
+| Exporters              | `care.export`                               | `care.export`                  |
+| QA / review policies   | `care.review`                               | `care.review`                  |
 
 ## Required plugin attributes
 

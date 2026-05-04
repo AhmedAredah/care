@@ -10,7 +10,6 @@ the verbatim text rule.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .anchor_match import DEFAULT_FUZZY_THRESHOLD, find_anchor
 
@@ -18,8 +17,8 @@ from .anchor_match import DEFAULT_FUZZY_THRESHOLD, find_anchor
 @dataclass(frozen=True)
 class AnchorSpan:
     text: str  # extracted span (verbatim, never summarized)
-    start_offset: Optional[int]
-    end_offset: Optional[int]
+    start_offset: int | None
+    end_offset: int | None
     anchor_start_found: bool
     anchor_end_found: bool
     start_method: str = "miss"  # "exact" | "fuzzy" | "miss"
@@ -50,8 +49,8 @@ class AnchorSpan:
 def find_anchor_span(
     page_text: str,
     *,
-    anchor_start: Optional[str] = None,
-    anchor_end: Optional[str] = None,
+    anchor_start: str | None = None,
+    anchor_end: str | None = None,
     fuzzy_threshold: float = DEFAULT_FUZZY_THRESHOLD,
     allow_fuzzy: bool = True,
 ) -> AnchorSpan:

@@ -9,7 +9,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from ..core.plugin_helpers import evaluate_model_files_present
+from ..core.plugin_helpers import (
+    assert_offline_config as _assert_offline_config,
+    evaluate_model_files_present,
+)
 from ..ocr.base import ProviderHealth
 from .result import (
     DocumentAIResult,
@@ -45,6 +48,15 @@ class DocumentAIProvider(ABC):
     # are typically Tier C (vendor / unverified) until a fair in-domain
     # eval set exists; the UI must show the tier badge.
     accuracy_metrics: Optional[dict[str, Any]] = None
+
+    @classmethod
+    def assert_offline_config(cls, config: dict[str, Any]) -> None:
+        """Reject any config that opts the provider into network access.
+
+        See ``OCRProvider.assert_offline_config`` — same contract on
+        the DocumentAI layer.
+        """
+        _assert_offline_config(cls.name, config)
 
     @classmethod
     def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:

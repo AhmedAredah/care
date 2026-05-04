@@ -209,3 +209,41 @@ def test_assert_offline_config_checks_allow_network_first() -> None:
             "anyplugin",
             {"allow_network": True, "local_files_only": False},
         )
+
+
+# ---- assert_offline_config classmethods on every provider base ------------
+
+
+def test_pii_base_exposes_assert_offline_config_classmethod() -> None:
+    """The PII base mirrors the OCR base — concrete providers can
+    call ``self.assert_offline_config(config)`` from their ``load()``
+    without importing the helper themselves."""
+    from care.pii.base import PIIDetectionProvider
+
+    class _FakePII(PIIDetectionProvider):
+        name = "fakepii"
+
+        def load(self, config): pass  # pragma: no cover
+        def detect_text(self, text, context=None): return []  # pragma: no cover
+        def healthcheck(self): pass  # pragma: no cover
+        def get_model_manifest(self): return {}  # pragma: no cover
+
+    with pytest.raises(ConfigError, match="fakepii.allow_network"):
+        _FakePII.assert_offline_config({"allow_network": True})
+
+
+def test_document_ai_base_exposes_assert_offline_config_classmethod() -> None:
+    """Same on the DocumentAI base — Kosmos / LayoutLM / future
+    VLM providers all benefit from the same centralised gate."""
+    from care.document_ai.base import DocumentAIProvider
+
+    class _FakeVLM(DocumentAIProvider):
+        name = "fakevlm"
+
+        def load(self, config): pass  # pragma: no cover
+        def process_page_image(self, image, page_context, task): pass  # pragma: no cover
+        def healthcheck(self): pass  # pragma: no cover
+        def get_model_manifest(self): return {}  # pragma: no cover
+
+    with pytest.raises(ConfigError, match="fakevlm.local_files_only"):
+        _FakeVLM.assert_offline_config({"local_files_only": False})

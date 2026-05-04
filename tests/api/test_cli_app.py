@@ -34,8 +34,11 @@ def test_find_free_port_returns_preferred_when_free() -> None:
 
 def test_find_free_port_falls_back_when_taken() -> None:
     # Hold a port open; ``find_free_port`` must return a different one.
+    # Don't set SO_REUSEADDR — we want this socket to behave like a
+    # normal listener that takes the port exclusively. (On Windows,
+    # SO_REUSEADDR allows a second socket to bind the same port if it
+    # also sets the option, which would defeat the test.)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as held:
-        held.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         held.bind(("127.0.0.1", 0))
         held.listen(1)
         held_port = held.getsockname()[1]

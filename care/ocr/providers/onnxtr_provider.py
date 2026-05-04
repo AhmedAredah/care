@@ -80,6 +80,39 @@ class OnnxTROCRProvider(OCRProvider):
     supports_line_bboxes = True
     supports_confidence = True
 
+    MODEL_DIR_KEYS = ("model_dir",)
+    WEIGHT_MARKERS = ("*.onnx",)
+
+    # Tier B = published in-domain benchmark, not our own. Numbers
+    # are from the gopubby 2024 evaluation against six public datasets
+    # (degraded scans, dense pages, IAM handwritten, FUNSD printed
+    # forms, SROIE receipts, scene text). FUNSD is the most relevant
+    # to crash reports — it's literally "Form Understanding in Noisy
+    # Scanned Documents". Headline = FUNSD; per_category surfaces the
+    # full picture so the GUI can show why this engine is recommended.
+    accuracy_metrics = {
+        "tier": "B",
+        "benchmark": "gopubby-ocr-shootout",
+        "benchmark_version": "2024",
+        "metric_name": "accuracy",
+        "headline": 0.589,
+        "per_entity": {
+            "printed_forms_funsd": 0.589,
+            "degraded_noisy_scans": 0.398,
+            "dense_book_pages": 0.730,
+            "handwritten_iam": 0.423,
+            "receipts_sroie": 0.912,
+            "scene_street_text": 0.000,
+        },
+        "notes": (
+            "Source: ai.gopubby.com/i-tested-5-ocr-models-on-6-real-world-datasets. "
+            "FUNSD-style printed forms are the dominant CARE input shape; "
+            "OnnxTR ranks first on FUNSD and on degraded/noisy scans across "
+            "the five engines tested. Scene text is out of scope for crash "
+            "reports."
+        ),
+    }
+
     def __init__(self) -> None:
         self._loaded = False
         self._predictor: Any = None
@@ -95,10 +128,7 @@ class OnnxTROCRProvider(OCRProvider):
     # ------------------------------------------------------------------
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError("onnxtr.allow_network must be false")
-        if not config.get("local_files_only", True):
-            raise ConfigError("onnxtr.local_files_only must be true")
+        self.assert_offline_config(config)
 
         det_arch = str(config.get("det_arch", "fast_base"))
         reco_arch = str(config.get("reco_arch", "crnn_vgg16_bn"))

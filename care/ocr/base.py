@@ -5,6 +5,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from ..core.plugin_helpers import (
+    assert_offline_config as _assert_offline_config,
+    evaluate_model_files_present,
+)
 from .result import OCRResult
 
 
@@ -27,6 +31,13 @@ class OCRProvider(ABC):
     supports_line_bboxes: bool = False
     supports_confidence: bool = False
 
+    # Subclasses override these to declare which config keys point at
+    # model directories and which filenames/globs identify a populated
+    # install. The default empty tuples mean "no model files needed"
+    # (pure-Python or no-op providers).
+    MODEL_DIR_KEYS: tuple[str, ...] = ()
+    WEIGHT_MARKERS: tuple[str, ...] = ()
+
     # Optional benchmark numbers surfaced in the GUI plugin picker.
     # Schema: {"tier": "A"|"B"|"C", "benchmark": str, "benchmark_version": str,
     #          "metric_name": "cer"|"wer"|"f1"|"accuracy", "headline": float,
@@ -35,6 +46,25 @@ class OCRProvider(ABC):
     # B = published numbers in-domain; C = vendor / unverified. The UI
     # only ranks providers within the same tier.
     accuracy_metrics: Optional[dict[str, Any]] = None
+
+    @classmethod
+    def assert_offline_config(cls, config: dict[str, Any]) -> None:
+        """Reject any config that opts the provider into network access.
+
+        Real OCR providers must call this as the first line of
+        :meth:`load` so misconfiguration fails closed before model
+        files are touched. The classmethod form picks up ``cls.name``
+        for the error message automatically.
+        """
+        _assert_offline_config(cls.name, config)
+
+    @classmethod
+    def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:
+        return evaluate_model_files_present(
+            provider_cfg,
+            model_dir_keys=cls.MODEL_DIR_KEYS,
+            weight_markers=cls.WEIGHT_MARKERS,
+        )
 
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None:

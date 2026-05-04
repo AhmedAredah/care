@@ -38,7 +38,7 @@ dependencies = [
     # round-trips with comments and ordering preserved (Phase 13.3).
     # PyYAML stays for the read path (smaller, faster, and used in
     # places where comments don't matter).
-    "ruamel.yaml>=0.18",
+    "ruamel.yaml>=0.19.1",
     # pywebview wraps the FastAPI server in a native desktop window
     # (Phase 14). Uses the OS's existing webview component — no
     # bundled Chromium. On Linux, operators may also need to install
@@ -50,7 +50,7 @@ dependencies = [
     # GUI fails at startup with "No module named 'clr'". Linux uses
     # GTK/WebKit and macOS uses Cocoa WebKit — neither needs pythonnet,
     # so it's gated behind a sys_platform marker.
-    "pythonnet>=3.0.3 ; sys_platform == 'win32'",
+    "pythonnet>=3.0.5 ; sys_platform == 'win32'",
     "uvicorn>=0.46.0",
 ]
 
@@ -70,14 +70,14 @@ ml = [
 # before any SDK call).
 llm-openai = ["openai>=1.40"]
 llm-anthropic = ["anthropic>=0.30"]
-llm-gemini = ["google-generativeai>=0.7"]
+llm-gemini = ["google-generativeai>=0.8.6"]
 
 # OnnxTR OCR engine — opt-in. Pulls onnxruntime + opencv (~400 MB)
 # but stays out of [ml] because there's no torch/transformers
 # requirement. Operators install this extra (or use the offline
 # wheelhouse) before enabling the ``onnxtr`` provider.
 ocr-onnxtr = [
-    "onnxtr[cpu-headless]>=0.8",
+    "onnxtr[cpu-headless]>=0.8.1",
 ]
 
 [project.urls]

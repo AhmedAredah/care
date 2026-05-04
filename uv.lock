@@ -131,7 +131,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "ruamel-yaml", specifier = ">=0.19.1" },
     { name = "torch", marker = "extra == 'ml'", specifier = ">=2.5" },
-    { name = "transformers", marker = "extra == 'ml'", specifier = ">=4.50" },
+    { name = "transformers", marker = "extra == 'ml'", specifier = ">=5.6" },
     { name = "uvicorn", specifier = ">=0.46.0" },
 ]
 provides-extras = ["ml", "llm-openai", "llm-anthropic", "llm-gemini", "ocr-onnxtr"]

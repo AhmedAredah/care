@@ -50,6 +50,11 @@ following the activation policy in
   from local files.
 - `roberta_ner` — RoBERTa-large general English NER (MIT). Supplements
   regex recognizers for free-text `PER` / `LOC` / `ORG` entities.
+- `openai_privacy_filter` — OpenAI Privacy Filter (Apache-2.0). A
+  bidirectional token-classification model trained for PII detection
+  with eight labels (person, address, email, phone, date, URL,
+  account number, secret). Requires `transformers>=5.6` from the
+  `[ml]` extra. ~2.8 GB on disk.
 - `mock_pii` — fixture provider for tests; never enabled outside CI.
 
 ## Redaction placeholders

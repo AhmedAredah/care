@@ -48,6 +48,7 @@ disabled.**
 | `presidio` | disabled | no | no | MIT; bundled spaCy model carries its own license |
 | `piiranha` | disabled | no | no | License-review-required, NOT bundled |
 | `roberta_ner` (PII) | disabled | no | no | MIT (Jean-Baptiste/roberta-large-ner-english). General English NER for free-text PER/LOC/ORG. NOT bundled. |
+| `openai_privacy_filter` (PII) | disabled | no | no | Apache-2.0 (openai/privacy-filter). 1.5B-param token classifier (50M active via MoE), eight PII labels including account numbers and secrets. ~2.8 GB. Needs `transformers>=5.6` (in `[ml]` extra). NOT bundled. |
 | `mock_pii` | n/a | no | no | tests only |
 | `kosmos25` | disabled | **yes** | **yes** | License-review-required, NOT bundled |
 | `layoutlm` | disabled | no | no | License varies by variant — see "LayoutLM" section below. |

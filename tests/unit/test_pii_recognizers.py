@@ -19,6 +19,8 @@ from care.pii.recognizers import (
 
 
 def test_vin_matches_17_chars_no_iqo() -> None:
+    # 1HGCM82633A004352 is a real-format VIN with a valid mod-11 check
+    # digit (position 9 = 3 matches the expected 3).
     matches = vin.find("VIN: 1HGCM82633A004352 sample")
     assert len(matches) == 1
     assert matches[0].text == "1HGCM82633A004352"
@@ -27,6 +29,42 @@ def test_vin_matches_17_chars_no_iqo() -> None:
 def test_vin_rejects_strings_with_i_o_q() -> None:
     # Contains "I" — not a valid VIN char.
     matches = vin.find("INVALID: I1234567890123456")
+    assert matches == []
+
+
+def test_vin_accepts_nhtsa_documentation_examples() -> None:
+    """A spread of well-formed VINs whose check digit is valid.
+
+    Verification: each VIN was hand-computed against the 49 CFR §565
+    transliteration table + weights vector ``[8,7,6,5,4,3,2,10,0,9,
+    8,7,6,5,4,3,2]`` to confirm position 9 matches.
+    """
+    cases = [
+        "1M8GDM9AXKP042788",  # NHTSA vPIC documentation example (check = X)
+        "1HGCM82633A004352",  # Honda Accord 2003 (check = 3)
+    ]
+    for v in cases:
+        matches = vin.find(f"VIN {v} reported.")
+        assert len(matches) == 1, f"expected match for {v}"
+        assert matches[0].text == v
+
+
+def test_vin_rejects_check_digit_failures() -> None:
+    """A 17-char string in the VIN alphabet whose mod-11 check digit
+    is wrong must be rejected — it's a false-positive (random ID,
+    transaction number, OCR error), not a real VIN."""
+    # Same as the NHTSA example with position 9 mutated X -> Z.
+    text = "VIN 1M8GDM9AZKP042788 in narrative."
+    matches = vin.find(text)
+    assert matches == [], f"unexpected match: {matches}"
+
+
+def test_vin_rejects_random_alphanumeric_seventeen_char_strings() -> None:
+    """Random 17-char strings happen to fit the alphabet but aren't
+    VINs — the check digit catches the great majority of them."""
+    matches = vin.find("Reference ABCDEFGHJKLMNPRST attached.")
+    # ABCDEFGHJKLMNPRST is alphabetic only, fits the alphabet, but
+    # almost certainly fails the check digit. Confirm.
     assert matches == []
 
 
@@ -57,6 +95,49 @@ def test_dob_label_required() -> None:
     matches = date_of_birth.find("DOB: 01/02/1990 incident date 03/04/2024")
     assert len(matches) == 1
     assert matches[0].text == "01/02/1990"
+
+
+def test_dob_rejects_impossible_calendar_dates() -> None:
+    """Feb 30, month 13, day 99 — the regex matches but the date
+    constructor refuses, so the recognizer drops them."""
+    matches = date_of_birth.find(
+        "DOB 02/30/1985 DOB 13/45/1990 DOB 99/99/2000"
+    )
+    assert matches == []
+
+
+def test_dob_rejects_future_year() -> None:
+    """Year > current year is implausible for a birthdate."""
+    matches = date_of_birth.find("DOB 01/02/3024 reported.")
+    assert matches == []
+
+
+def test_dob_rejects_year_before_1900() -> None:
+    """Year < 1900 is rejected as implausible for a person on a
+    crash report — also catches the most common 2-digit-year format
+    when stringified incorrectly (e.g., year 85)."""
+    matches = date_of_birth.find("DOB 01/02/1875 reported.")
+    assert matches == []
+
+
+def test_dob_rejects_two_digit_year() -> None:
+    """The recognizer requires a four-digit year — two-digit years
+    are ambiguous (1985 vs 2085) and rejected to avoid the
+    century-pivot drift problem across releases."""
+    matches = date_of_birth.find("DOB 01/02/85 reported.")
+    assert matches == []
+
+
+def test_dob_accepts_leap_day() -> None:
+    """Feb 29 on a leap year is a legitimate birthdate."""
+    matches = date_of_birth.find("DOB: 02/29/1992 reported.")
+    assert len(matches) == 1
+    assert matches[0].text == "02/29/1992"
+
+
+def test_dob_rejects_leap_day_on_non_leap_year() -> None:
+    matches = date_of_birth.find("DOB: 02/29/1991 reported.")
+    assert matches == []
 
 
 def test_driver_license_label_required() -> None:

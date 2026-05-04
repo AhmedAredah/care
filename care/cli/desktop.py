@@ -220,11 +220,7 @@ def _assert_loopback(host: str) -> None:
 
 
 def find_free_port(preferred: int, host: str = "127.0.0.1") -> int:
-    """Return ``preferred`` if it's free, otherwise an OS-assigned port.
-
-    Tested with ``SO_REUSEADDR`` to avoid TIME_WAIT pollution between
-    quick relaunches of the desktop app.
-    """
+    """Return ``preferred`` if it's free, otherwise an OS-assigned port."""
     _assert_loopback(host)
     if _is_port_free(host, preferred):
         return preferred
@@ -234,10 +230,15 @@ def find_free_port(preferred: int, host: str = "127.0.0.1") -> int:
 
 
 def _is_port_free(host: str, port: int) -> bool:
+    # Probe with an exclusive bind — no SO_REUSEADDR. On Windows, two
+    # sockets that BOTH set SO_REUSEADDR can share the same port, which
+    # would make this helper falsely report "free" when another listener
+    # is already bound. We want an honest "is anybody home?" check; if
+    # the previous bind is in TIME_WAIT, falling back to an OS-assigned
+    # port is the correct outcome.
     _assert_loopback(host)
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((host, port))
     except OSError:
         return False

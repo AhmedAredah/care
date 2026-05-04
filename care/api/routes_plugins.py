@@ -30,6 +30,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends
 
 from ..core.config import AppConfig
+from ..core.paths import normalize_input_path
 from ..document_ai.registry import get_registry as get_vlm_registry
 from ..ocr.registry import get_registry as get_ocr_registry
 from ..pii.registry import get_registry as get_pii_registry
@@ -52,11 +53,21 @@ _MODEL_DIR_KEYS: tuple[str, ...] = (
 
 
 def _check_model_files_present(provider_cfg: dict[str, Any]) -> Optional[bool]:
-    """Return True if every configured model directory exists on disk.
+    """Return True if every configured model directory exists on disk
+    and contains at least one plausible weight file.
 
     Returns ``None`` when no model-dir keys are configured (the
     provider doesn't need any — e.g., the regex PII provider). Paths
     are never returned to the caller.
+
+    Format detection:
+    - ``config.json`` → Hugging Face checkpoint (Piiranha, RoBERTa,
+      Kosmos-2.5, LayoutLM, hf_local LLM).
+    - any ``*.onnx`` → ONNX-runtime weights (OnnxTR).
+    - any ``*.pdmodel`` / ``*.pdiparams`` → PaddleOCR weights.
+    - any ``*.traineddata`` → Tesseract language pack.
+    Provider-side ``load()`` does the deeper validation; this endpoint
+    only answers "is anything plausibly there?".
     """
     candidates = [
         (key, provider_cfg[key])
@@ -66,15 +77,44 @@ def _check_model_files_present(provider_cfg: dict[str, Any]) -> Optional[bool]:
     if not candidates:
         return None
     for key, path_str in candidates:
-        path = Path(str(path_str))
+        # normalize_input_path enforces absolute, strips quotes, and
+        # is the project's boundary sanitizer for operator-supplied
+        # filesystem paths (see .github/codeql/README.md). A relative
+        # path here is a misconfiguration — report "not installed"
+        # rather than crash the endpoint.
+        try:
+            path = normalize_input_path(str(path_str))
+        except ValueError:
+            return False
         if not path.exists() or not path.is_dir():
             return False
-        # The bare ``model_dir`` key implies a Hugging Face-style
-        # checkpoint; we additionally require config.json to weed
-        # out empty placeholder directories.
-        if key == "model_dir" and not (path / "config.json").exists():
+        if not _model_dir_has_known_weights(path):
             return False
     return True
+
+
+# Filename markers that signal a populated model directory. We do not
+# enumerate the directory exhaustively — a single hit is enough to
+# distinguish "operator placed weights" from "empty placeholder dir".
+_HF_MARKER = "config.json"
+_WEIGHT_GLOBS: tuple[str, ...] = (
+    "*.onnx",          # OnnxTR
+    "*.pdmodel",       # PaddleOCR
+    "*.pdiparams",     # PaddleOCR
+    "*.traineddata",   # Tesseract
+)
+
+
+def _model_dir_has_known_weights(path: Path) -> bool:
+    if (path / _HF_MARKER).exists():
+        return True
+    for pattern in _WEIGHT_GLOBS:
+        try:
+            if next(path.glob(pattern), None) is not None:
+                return True
+        except OSError:
+            return False
+    return False
 
 
 # Accuracy tiers surfaced in the UI. Anything else is rejected (the

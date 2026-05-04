@@ -19,6 +19,10 @@ Privacy-safe extraction of crash diagrams and narratives from police crash repor
 
 ## What CARE does
 
+<div align="center">
+  <img src="assets/care-workflow.png" alt="CARE workflow — from crash report PDF through OCR, region extraction, content separation, and PII redaction to share-safe research artifacts" width="100%"/>
+</div>
+
 CARE turns piles of police crash report PDFs into structured, **redacted** research artifacts:
 
 1. **Ingests** PDFs and scanned images, hashes every input, never modifies originals.

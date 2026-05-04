@@ -1,44 +1,35 @@
-"""Person-name recognizer.
+"""Person-name recognizer (label-anchored).
 
-Two patterns combined: a label-anchored matcher that captures the
-name portion after role keywords (Officer / Driver / ...), and a
-synthetic-fixture matcher for ``JOHN DOE``-style placeholders used in
-tests. Each pattern carries its own confidence.
+Captures the name portion that follows one of a fixed set of role
+keywords typical of crash-report narrative — *Officer Smith*,
+*Driver Johnson*, *Witness named Jane Lee*. The role anchor is
+case-insensitive so the recognizer fires on both prose ("the witness
+named …") and ALL-CAPS form fields ("DRIVER …").
+
+Names without an anchoring role keyword are intentionally not matched
+here. Regex doesn't have a good answer for general name detection —
+that's what the NER providers (RoBERTa-NER, Piiranha) are for. This
+recognizer is a deterministic, no-model best-effort layer for the
+cases that *do* follow a regular shape; operators who need broader
+name coverage should add an NER provider to ``pii.provider_chain``.
 """
 from __future__ import annotations
 
 import re
 
-from ._base import Match, RegexRecognizer
+from ._base import RegexRecognizer
 
 
 class PersonNameRecognizer(RegexRecognizer):
     entity_type = "PERSON_NAME"
     detection_reason = "regex_person_name"
     default_confidence = 0.7
-    # ``pattern`` here is the contextual one so generic introspection
-    # (e.g., bench tools that read ``cls.pattern``) sees the primary
-    # matcher; ``find`` runs both.
+    capture_group = 1
     pattern = re.compile(
-        r"(?:Officer|Driver|Witness|Owner|Operator|Patient|Pedestrian|Suspect|Victim)\s+"
+        r"(?i:officer|driver|witness|owner|operator|patient|pedestrian|"
+        r"suspect|victim|named)\s+"
         r"([A-Z][a-zA-Z'\.]{1,30}(?:\s+[A-Z][a-zA-Z'\.]{1,30}){0,3})\b"
     )
-
-    _SYNTHETIC_PATTERN = re.compile(r"\b(?:JOHN|JANE)\s+DOE\b", re.IGNORECASE)
-    _SYNTHETIC_CONFIDENCE = 0.95
-
-    @classmethod
-    def find(cls, text: str) -> list[Match]:
-        matches: list[Match] = []
-        for m in cls.pattern.finditer(text):
-            matches.append(
-                Match(m.group(1), m.start(1), m.end(1), cls.default_confidence)
-            )
-        for m in cls._SYNTHETIC_PATTERN.finditer(text):
-            matches.append(
-                Match(m.group(0), m.start(0), m.end(0), cls._SYNTHETIC_CONFIDENCE)
-            )
-        return matches
 
 
 find = PersonNameRecognizer.find

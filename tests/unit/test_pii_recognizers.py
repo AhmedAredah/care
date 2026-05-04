@@ -184,9 +184,28 @@ def test_person_name_contextual() -> None:
     assert any(m.text == "Smith" for m in matches)
 
 
-def test_person_name_synthetic_jane_doe() -> None:
+def test_person_name_after_named_anchor() -> None:
+    """``named`` is a role anchor too — "the witness named X" is a
+    common crash-report phrasing where the name follows the verb
+    rather than a noun role. The recognizer must fire on this shape."""
     matches = person_name.find("Witness named JANE DOE testified")
     assert any(m.text.upper().startswith("JANE") for m in matches)
+
+
+def test_person_name_role_anchor_is_case_insensitive() -> None:
+    """Form fields and OCR output often emit the role anchor in
+    upper-case ("DRIVER John Smith"). The recognizer's role list is
+    case-insensitive so both prose and form-field shapes match."""
+    matches = person_name.find("DRIVER John Smith was at the wheel")
+    assert any(m.text == "John Smith" for m in matches)
+
+
+def test_person_name_does_not_match_bare_placeholder() -> None:
+    """Without any role anchor, "JOHN DOE" must NOT match the
+    recognizer. Regex isn't a general name detector — operators who
+    need that should add an NER provider to the chain."""
+    matches = person_name.find("JOHN DOE walked in")
+    assert matches == []
 
 
 def test_person_name_skips_single_letter() -> None:

@@ -114,6 +114,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
             "has_text_layer": inspection.has_text_layer,
             "appears_image_only": inspection.appears_image_only,
             "requires_ocr": inspection.requires_ocr,
+            "page_has_text": list(inspection.page_has_text),
             "rotation": list(inspection.rotation),
             "warnings": list(inspection.warnings),
         },

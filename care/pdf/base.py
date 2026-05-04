@@ -17,6 +17,16 @@ class FileInspection:
     requires_ocr: bool
     rotation: list[int] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Per-page native-text presence. Length must match ``page_count`` when
+    # populated; empty means "not measured" (legacy callers). The pipeline
+    # uses this to route mixed PDFs page-by-page — pages with native text
+    # bypass OCR while image-only pages in the same document still get
+    # rasterized and OCR'd. Document-level flags above stay monolithic
+    # (``has_text_layer = any(page_has_text)``,
+    # ``appears_image_only = not any(page_has_text)``,
+    # ``requires_ocr = not any(page_has_text)``) for back-compat with
+    # existing callers; rely on this list when per-page routing matters.
+    page_has_text: list[bool] = field(default_factory=list)
 
 
 @dataclass
@@ -56,5 +66,9 @@ class PDFImageBackend(ABC):
 
     @abstractmethod
     def render_pages(
-        self, file_path: Path, output_dir: Path, dpi: int = 200
+        self,
+        file_path: Path,
+        output_dir: Path,
+        dpi: int = 200,
+        page_indices: Optional[list[int]] = None,
     ) -> list[RenderedPage]: ...

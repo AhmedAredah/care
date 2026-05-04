@@ -12,6 +12,7 @@ from care.pdf.pypdfium2_backend import PypdfiumPDFImageBackend
 from tests._fixtures import (
     make_digital_pdf,
     make_image_only_pdf,
+    make_mixed_pdf,
     make_synthetic_image,
 )
 
@@ -27,6 +28,7 @@ def test_inspect_image_marks_ocr_required(tmp_path: Path) -> None:
     assert inspection.appears_image_only is True
     assert inspection.requires_ocr is True
     assert len(inspection.page_dimensions) == 1
+    assert inspection.page_has_text == [False]
 
 
 def test_inspect_digital_pdf_finds_text_layer(tmp_path: Path) -> None:
@@ -37,6 +39,7 @@ def test_inspect_digital_pdf_finds_text_layer(tmp_path: Path) -> None:
     assert inspection.page_count >= 1
     assert inspection.has_text_layer is True
     assert inspection.requires_ocr is False
+    assert inspection.page_has_text and all(inspection.page_has_text)
 
 
 def test_inspect_image_only_pdf_requires_ocr(tmp_path: Path) -> None:
@@ -47,6 +50,29 @@ def test_inspect_image_only_pdf_requires_ocr(tmp_path: Path) -> None:
     assert inspection.file_type == "pdf"
     assert inspection.has_text_layer is False
     assert inspection.requires_ocr is True
+    assert inspection.page_has_text == [False]
+
+
+def test_inspect_mixed_pdf_records_per_page_text_presence(tmp_path: Path) -> None:
+    """A PDF with one native page and one image-only page must report
+    page_has_text=[True, False] and warn about the mixed shape, while
+    document-level flags stay monolithic for back-compat."""
+    img = make_synthetic_image(tmp_path / "scratch.png")
+    pdf = make_mixed_pdf(tmp_path / "mixed.pdf", image_path=img)
+
+    backend = PypdfiumPDFImageBackend()
+    inspection = backend.inspect_file(pdf)
+
+    assert inspection.page_count == 2
+    assert inspection.page_has_text == [True, False]
+    # has_text_layer is "any page has text", so True here.
+    assert inspection.has_text_layer is True
+    # appears_image_only / requires_ocr are "every page is image-only",
+    # so False — but the warnings list flags the mixed shape so callers
+    # who don't read page_has_text still get a hint.
+    assert inspection.appears_image_only is False
+    assert inspection.requires_ocr is False
+    assert any("Mixed PDF" in w for w in inspection.warnings)
 
 
 def test_extract_text_layer_returns_words(tmp_path: Path) -> None:
@@ -92,6 +118,22 @@ def test_render_pdf_emits_one_image_per_page(tmp_path: Path) -> None:
         assert r.image_path.exists()
         assert r.image_path.suffix == ".png"
         assert r.dpi == 144
+
+
+def test_render_pdf_filters_to_requested_page_indices(tmp_path: Path) -> None:
+    """``page_indices`` lets the caller render a subset — used by the
+    mixed-PDF path so we don't rasterize pages whose text we already
+    extracted natively."""
+    img = make_synthetic_image(tmp_path / "scratch.png")
+    p = make_mixed_pdf(tmp_path / "mixed.pdf", image_path=img)
+    out = tmp_path / "work"
+    backend = PypdfiumPDFImageBackend()
+
+    pages = backend.render_pages(p, out, dpi=100, page_indices=[1])
+    assert [r.page_index for r in pages] == [1]
+    assert pages[0].image_path.exists()
+    # Page 0 was NOT rendered.
+    assert not (out / "page_0.png").exists()
 
 
 # ---- Phase 5: image-space char/word bboxes ----------------------------------

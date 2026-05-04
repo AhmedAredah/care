@@ -79,6 +79,35 @@ def make_example_template_pdf(
     return path
 
 
+def make_mixed_pdf(
+    path: Path,
+    *,
+    image_path: Path,
+    native_lines: list[str] | None = None,
+) -> Path:
+    """Synthesize a PDF whose page 0 has a native text layer and page 1
+    is image-only.
+
+    Mirrors the real-world shape that breaks the document-level routing
+    decision: an electronic form PDF (page 0) with a hand-scanned
+    witness statement appended (page 1).
+    """
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=12)
+    for line in native_lines or [
+        "MOCK CRASH REPORT",
+        "Officer Synthetic Test Only",
+        "Narrative: synthetic content for tests.",
+    ]:
+        pdf.cell(0, 10, line)
+        pdf.ln()
+    pdf.add_page()
+    pdf.image(str(image_path), x=10, y=10, w=180)
+    pdf.output(str(path))
+    return path
+
+
 def make_unknown_template_pdf(path: Path) -> Path:
     """A digital PDF whose text matches no registered template."""
     pdf = FPDF()

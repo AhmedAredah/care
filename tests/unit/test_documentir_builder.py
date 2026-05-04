@@ -4,8 +4,12 @@ from __future__ import annotations
 from care.document_ir.builder import (
     build_document_ir_from_native_text,
     build_document_ir_from_ocr,
+    build_document_ir_from_pages,
+    build_native_page,
+    build_ocr_page,
 )
 from care.ocr.providers.mock_ocr_provider import MockOCRProvider
+from care.pdf.base import NativeTextWord
 
 
 def test_build_from_ocr_assigns_provenance_and_ids() -> None:
@@ -62,3 +66,44 @@ def test_build_from_native_text_handles_empty_pages() -> None:
     assert len(doc.pages) == 2
     assert len(doc.pages[0].words) == 1
     assert doc.pages[1].words == []
+
+
+def test_build_document_ir_from_pages_mixes_native_and_ocr() -> None:
+    """The pipeline composes per-page Page objects (native or OCR)
+    and wraps them in a DocumentIR. Pages must be sorted by index and
+    both source kinds preserved."""
+    provider = MockOCRProvider()
+    provider.load({})
+    ocr_result = provider.process_page_image(image=None, page_context={})
+
+    page_native = build_native_page(
+        page_index=0,
+        width=800,
+        height=1000,
+        words=[NativeTextWord(page_index=0, text="HELLO", bbox=[0, 0, 50, 20])],
+    )
+    page_ocr = build_ocr_page(
+        page_index=1,
+        width=800,
+        height=1000,
+        result=ocr_result,
+    )
+
+    # Pass out of order to confirm the builder sorts.
+    doc = build_document_ir_from_pages(
+        document_id="sha256-mix",
+        source_file_name="mixed.pdf",
+        source_sha256="mix",
+        file_type="pdf",
+        pages=[page_ocr, page_native],
+    )
+
+    assert [p.page_index for p in doc.pages] == [0, 1]
+    assert doc.pages[0].text_source == "native"
+    assert doc.pages[1].text_source == "ocr"
+    # Native page word carries pdf-native source markers; OCR page
+    # carries the OCR provider's markers.
+    assert doc.pages[0].words[0].source == "native_pdf"
+    assert doc.pages[1].words[0].source_provider_type == "traditional_ocr"
+    # Pipeline provenance is always present.
+    assert any(p.provider == "care.pipeline" for p in doc.provenance)

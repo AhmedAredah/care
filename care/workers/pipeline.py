@@ -38,6 +38,9 @@ from ..document_ir import DocumentIR
 from ..document_ir.builder import (
     build_document_ir_from_native_text,
     build_document_ir_from_ocr,
+    build_document_ir_from_pages,
+    build_native_page,
+    build_ocr_page,
 )
 from ..document_ir.models import (
     AlternativeSource,
@@ -90,7 +93,7 @@ class ReportArtifact:
     file_entry: FileEntry
     inspection: FileInspection
     document_ir: DocumentIR
-    text_source: str  # "native" | "ocr"
+    text_source: str  # "native" | "ocr" | "mixed"
     template_match: TemplateMatch
     diagram: Optional[DiagramExtraction]
     narrative: Optional[NarrativeExtraction]
@@ -338,12 +341,29 @@ def _process_one(
     rendered: list[RenderedPage] = []
     ocr_provider_used: Optional[str] = None
 
-    if entry.file_type == "pdf" and inspection.has_text_layer:
+    # Per-page text-source routing. The inspection populates
+    # ``page_has_text`` so we can take the native path for pages with
+    # an extractable text layer and rasterize-and-OCR only the image-
+    # only pages within the same PDF. Pure-native and pure-OCR docs
+    # collapse to the original two paths automatically (every page
+    # falls into the same bucket).
+    is_pdf = entry.file_type == "pdf"
+    page_has_text = list(inspection.page_has_text)
+    # Defensive fallback: an inspection synthesised without per-page
+    # info (legacy callers, image inputs constructed elsewhere) has an
+    # empty list. Fill it from the document-level flag so routing
+    # stays correct.
+    if not page_has_text or len(page_has_text) != inspection.page_count:
+        page_has_text = [bool(inspection.has_text_layer)] * inspection.page_count
+
+    if is_pdf and any(page_has_text):
         scale = DEFAULT_RENDER_DPI / 72.0
         page_dimensions_image = [
             (int(round(w_pt * scale)), int(round(h_pt * scale)))
             for w_pt, h_pt in inspection.page_dimensions
         ]
+
+        # Native words come back per-page already, so this is just a bucket fill.
         native = backend.extract_text_layer(path, dpi=DEFAULT_RENDER_DPI)
         page_word_lists: list[list[NativeTextWord]] = [
             [] for _ in page_dimensions_image
@@ -351,15 +371,83 @@ def _process_one(
         for word in native.words:
             if 0 <= word.page_index < len(page_word_lists):
                 page_word_lists[word.page_index].append(word)
-        document_ir = build_document_ir_from_native_text(
+
+        # Rasterize only the pages that actually need OCR.
+        ocr_page_indices = [i for i, has in enumerate(page_has_text) if not has]
+        ocr_rendered: list[RenderedPage] = []
+        if ocr_page_indices:
+            ocr_rendered = backend.render_pages(
+                path,
+                doc_work,
+                dpi=DEFAULT_RENDER_DPI,
+                page_indices=ocr_page_indices,
+            )
+            rendered.extend(ocr_rendered)
+
+        rendered_by_index = {r.page_index: r for r in ocr_rendered}
+        composed_pages: list[IRPage] = []
+        for i, (w_img, h_img) in enumerate(page_dimensions_image):
+            if page_has_text[i]:
+                composed_pages.append(
+                    build_native_page(
+                        page_index=i,
+                        width=w_img,
+                        height=h_img,
+                        words=list(page_word_lists[i]),
+                    )
+                )
+            else:
+                r = rendered_by_index.get(i)
+                if r is None:
+                    # Defensive: should not happen — we asked for this
+                    # index above. Skip rather than crash the doc.
+                    composed_pages.append(
+                        build_ocr_page(
+                            page_index=i,
+                            width=w_img,
+                            height=h_img,
+                            result=OCRResult(),
+                        )
+                    )
+                    continue
+                ocr_result, provider_name = _ocr_with_chain(
+                    str(r.image_path),
+                    {"page_index": r.page_index, "dpi": r.dpi},
+                    ocr_providers,
+                )
+                ocr_provider_used = provider_name
+                composed_pages.append(
+                    build_ocr_page(
+                        page_index=r.page_index,
+                        width=r.width,
+                        height=r.height,
+                        result=ocr_result,
+                    )
+                )
+
+        document_ir = build_document_ir_from_pages(
             document_id=document_id,
             source_file_name=entry.name,
             source_sha256=entry.sha256,
             file_type=entry.file_type,
-            page_dimensions=page_dimensions_image,
-            page_word_lists=page_word_lists,
+            pages=composed_pages,
+            extra_provenance=[
+                Provenance(
+                    provider="native_pdf",
+                    provider_version="pypdfium2",
+                    provider_type="native_pdf",
+                )
+            ],
         )
-        text_source = "native"
+        # Document-level summary: stays "native" when every page took
+        # the native route, "ocr" if every page was rasterized, and
+        # "mixed" when both happened.
+        if all(page_has_text):
+            text_source = "native"
+        elif not any(page_has_text):
+            text_source = "ocr"
+        else:
+            text_source = "mixed"
     else:
         rendered = backend.render_pages(path, doc_work, dpi=DEFAULT_RENDER_DPI)
         page_results = []
@@ -413,8 +501,12 @@ def _process_one(
 
     # ---- Phase 3: template detection -----------------------------------
 
+    # Mixed docs have OCR-sourced pages whose confidence still matters
+    # for the QA gate; native-only docs report None as before.
     avg_confidence = (
-        average_word_confidence(document_ir) if text_source == "ocr" else None
+        average_word_confidence(document_ir)
+        if text_source in ("ocr", "mixed")
+        else None
     )
     template_match = detect_template(
         document_ir,

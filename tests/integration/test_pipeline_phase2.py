@@ -21,6 +21,7 @@ from care.workers.pipeline import (
 from tests._fixtures import (
     make_digital_pdf,
     make_image_only_pdf,
+    make_mixed_pdf,
     make_synthetic_image,
 )
 
@@ -98,6 +99,47 @@ def test_pipeline_falls_back_to_ocr_for_image_only_pdf(tmp_path: Path) -> None:
     assert artifact.document_ir.pages[0].text_source == "ocr"
     assert artifact.work_dir is not None
     assert Path(artifact.work_dir).is_dir()
+
+
+def test_pipeline_routes_mixed_pdf_per_page(tmp_path: Path) -> None:
+    """A single PDF whose page 0 has native text and page 1 is a
+    rasterized image must be routed page-by-page: page 0 native, page
+    1 OCR. This was the silent data-loss bug under the previous
+    document-level routing — the whole PDF took the native path and
+    page 1 emitted no words.
+    """
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    img = make_synthetic_image(tmp_path / "scratch.png")
+    make_mixed_pdf(inputs / "mixed.pdf", image_path=img)
+
+    result = run_pipeline(inputs, config=_config_for(tmp_path))
+    assert len(result.artifacts) == 1
+    artifact = result.artifacts[0]
+
+    # Document-level summary surfaces the mixed shape so the GUI /
+    # manifest can show it explicitly.
+    assert artifact.text_source == "mixed"
+    assert artifact.inspection.page_has_text == [True, False]
+    assert artifact.inspection.has_text_layer is True
+
+    pages = artifact.document_ir.pages
+    assert len(pages) == 2
+    assert pages[0].text_source == "native"
+    assert pages[1].text_source == "ocr"
+
+    # Page 0 carries the typed narrative.
+    p0_text = " ".join(w.text for w in pages[0].words)
+    assert "MOCK" in p0_text
+    assert "REPORT" in p0_text
+
+    # Page 1 carries the mock OCR output rather than being silently
+    # blank. Mock OCR emits "MOCK"/"REPORT" — the proof point is that
+    # SOME words were produced and they came from a traditional OCR
+    # provider, not from the native_pdf source.
+    assert pages[1].words, "page 1 must not be silently empty"
+    assert all(w.source != "native_pdf" for w in pages[1].words)
+    assert all(w.source_provider_type == "traditional_ocr" for w in pages[1].words)
 
 
 def test_pipeline_processes_mixed_directory(tmp_path: Path) -> None:

@@ -55,13 +55,14 @@ class PypdfiumPDFImageBackend(PDFImageBackend):
             appears_image_only=True,
             requires_ocr=True,
             rotation=[0],
+            page_has_text=[False],
         )
 
     def _inspect_pdf(self, path: Path) -> FileInspection:
         warnings: list[str] = []
         page_dimensions: list[tuple[int, int]] = []
         rotations: list[int] = []
-        has_any_text = False
+        page_has_text: list[bool] = []
 
         doc = pdfium.PdfDocument(str(path))
         try:
@@ -73,22 +74,31 @@ class PypdfiumPDFImageBackend(PDFImageBackend):
                     height = int(page.get_height())
                     page_dimensions.append((width, height))
                     rotations.append(int(page.get_rotation()))
-                    if not has_any_text:
-                        text_page = page.get_textpage()
-                        try:
-                            text = text_page.get_text_range()
-                            if text and text.strip():
-                                has_any_text = True
-                        finally:
-                            text_page.close()
+                    text_page = page.get_textpage()
+                    try:
+                        text = text_page.get_text_range()
+                        page_has_text.append(bool(text and text.strip()))
+                    finally:
+                        text_page.close()
                 finally:
                     page.close()
         finally:
             doc.close()
 
+        has_any_text = any(page_has_text)
         appears_image_only = not has_any_text
         if appears_image_only:
             warnings.append("No text layer detected; OCR will be required.")
+        elif not all(page_has_text):
+            # Mixed: at least one native page and at least one image-only
+            # page. Used to be silently mis-routed (whole doc went native
+            # and image pages emitted nothing); per-page routing now
+            # rasterizes the empty pages.
+            empty = [i for i, has in enumerate(page_has_text) if not has]
+            warnings.append(
+                f"Mixed PDF — {len(empty)} of {page_count} pages have no text "
+                f"layer; OCR will run on those pages."
+            )
         return FileInspection(
             file_type="pdf",
             page_count=page_count,
@@ -98,6 +108,7 @@ class PypdfiumPDFImageBackend(PDFImageBackend):
             requires_ocr=appears_image_only,
             rotation=rotations,
             warnings=warnings,
+            page_has_text=page_has_text,
         )
 
     # ----- native text -----------------------------------------------------
@@ -223,16 +234,24 @@ class PypdfiumPDFImageBackend(PDFImageBackend):
     # ----- render ----------------------------------------------------------
 
     def render_pages(
-        self, file_path: Path, output_dir: Path, dpi: int = 200
+        self,
+        file_path: Path,
+        output_dir: Path,
+        dpi: int = 200,
+        page_indices: list[int] | None = None,
     ) -> list[RenderedPage]:
         path = Path(file_path)
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
 
         if is_image(path):
+            # Single-page sources ignore page_indices — page 0 is the only
+            # legal index, and asking for nothing returns nothing.
+            if page_indices is not None and 0 not in page_indices:
+                return []
             return self._render_image(path, out, dpi)
         if is_pdf(path):
-            return self._render_pdf(path, out, dpi)
+            return self._render_pdf(path, out, dpi, page_indices)
         raise ValueError(f"Unsupported file type: {path}")
 
     def _render_image(self, path: Path, out: Path, dpi: int) -> list[RenderedPage]:
@@ -252,12 +271,25 @@ class PypdfiumPDFImageBackend(PDFImageBackend):
                 )
             ]
 
-    def _render_pdf(self, path: Path, out: Path, dpi: int) -> list[RenderedPage]:
+    def _render_pdf(
+        self,
+        path: Path,
+        out: Path,
+        dpi: int,
+        page_indices: list[int] | None,
+    ) -> list[RenderedPage]:
         rendered: list[RenderedPage] = []
         scale = dpi / 72.0
         doc = pdfium.PdfDocument(str(path))
         try:
+            wanted = (
+                set(page_indices)
+                if page_indices is not None
+                else set(range(len(doc)))
+            )
             for i in range(len(doc)):
+                if i not in wanted:
+                    continue
                 page = doc[i]
                 try:
                     bitmap = page.render(scale=scale)

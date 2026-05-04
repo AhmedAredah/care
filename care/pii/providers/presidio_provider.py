@@ -29,6 +29,9 @@ class PresidioPIIProvider(PIIDetectionProvider):
     requires_network = False
     enabled_by_default = False
 
+    MODEL_DIR_KEYS = ("model_dir",)
+    WEIGHT_MARKERS = ("config.json",)
+
     supported_entities = [
         "PERSON_NAME",
         "EMAIL",

@@ -32,16 +32,16 @@ class TesseractProvider(OCRProvider):
     supports_line_bboxes = True
     supports_confidence = True
 
+    MODEL_DIR_KEYS = ("tessdata_dir",)
+    WEIGHT_MARKERS = ("*.traineddata",)
+
     def __init__(self) -> None:
         self._loaded = False
         self._tessdata_dir: Optional[Path] = None
         self._binary: Optional[str] = None
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError(
-                "tesseract.allow_network must be false"
-            )
+        self.assert_offline_config(config)
 
         tessdata = Path(config.get("tessdata_dir") or "")
         if not tessdata or not tessdata.exists():

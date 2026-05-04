@@ -38,6 +38,9 @@ class Kosmos25Provider(DocumentAIProvider):
     requires_network = False
     enabled_by_default = False
 
+    MODEL_DIR_KEYS = ("model_dir", "processor_dir")
+    WEIGHT_MARKERS = ("config.json",)
+
     supports_image_to_text = True
     supports_image_to_markdown = True
     supports_spatial_text = True

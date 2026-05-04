@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+from ..core.plugin_helpers import evaluate_model_files_present
 from ..ocr.base import ProviderHealth
 from .result import (
     DocumentAIResult,
@@ -36,10 +37,22 @@ class DocumentAIProvider(ABC):
     generative_model: bool = True
     hallucination_risk: bool = True
 
+    # See OCRProvider.MODEL_DIR_KEYS / WEIGHT_MARKERS.
+    MODEL_DIR_KEYS: tuple[str, ...] = ()
+    WEIGHT_MARKERS: tuple[str, ...] = ()
+
     # See OCRProvider.accuracy_metrics for the schema. VLM benchmarks
     # are typically Tier C (vendor / unverified) until a fair in-domain
     # eval set exists; the UI must show the tier badge.
     accuracy_metrics: Optional[dict[str, Any]] = None
+
+    @classmethod
+    def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:
+        return evaluate_model_files_present(
+            provider_cfg,
+            model_dir_keys=cls.MODEL_DIR_KEYS,
+            weight_markers=cls.WEIGHT_MARKERS,
+        )
 
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None: ...

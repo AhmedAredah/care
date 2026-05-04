@@ -66,6 +66,9 @@ class RobertaNERProvider(PIIDetectionProvider):
     requires_network = False
     enabled_by_default = False
 
+    MODEL_DIR_KEYS = ("model_dir",)
+    WEIGHT_MARKERS = _REQUIRED_MODEL_FILES
+
     supported_entities = ["PERSON_NAME", "ADDRESS"]
     supports_offsets = True
     supports_bboxes = False

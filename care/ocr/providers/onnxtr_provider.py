@@ -80,6 +80,9 @@ class OnnxTROCRProvider(OCRProvider):
     supports_line_bboxes = True
     supports_confidence = True
 
+    MODEL_DIR_KEYS = ("model_dir",)
+    WEIGHT_MARKERS = ("*.onnx",)
+
     def __init__(self) -> None:
         self._loaded = False
         self._predictor: Any = None

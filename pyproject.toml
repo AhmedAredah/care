@@ -50,7 +50,7 @@ dependencies = [
     # GUI fails at startup with "No module named 'clr'". Linux uses
     # GTK/WebKit and macOS uses Cocoa WebKit — neither needs pythonnet,
     # so it's gated behind a sys_platform marker.
-    "pythonnet>=3.0.3 ; sys_platform == 'win32'",
+    "pythonnet>=3.0.5 ; sys_platform == 'win32'",
     "uvicorn>=0.46.0",
 ]
 

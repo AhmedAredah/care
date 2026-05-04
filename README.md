@@ -84,6 +84,22 @@ care verify-offline                          # confirm no network paths
 care validate-template templates/example_state/example_template_v1.yaml
 ```
 
+## Choosing an OCR engine
+
+**TL;DR — leave the default (`onnxtr`) on.** It's the right tool for printed/scanned crash report forms.
+
+Crash reports are *scanned printed forms*, sometimes with a *handwritten* officer narrative. Independent benchmarks (e.g. [this one](https://ai.gopubby.com/i-tested-5-ocr-models-on-6-real-world-datasets-heres-which-one-you-should-actually-use-50badae3c16d) on FUNSD/IAM/SROIE) put the engines roughly here for our document type:
+
+| Engine | Best at | Use it when |
+|---|---|---|
+| **OnnxTR** *(default)* | Printed forms, degraded scans | **Always.** Best on FUNSD-style forms, best on noisy scans, no PyTorch dependency, ~400 MB. |
+| Tesseract | Mediocre everywhere | You need a system-wide binary already installed and don't care about peak accuracy. |
+| TrOCR-handwritten | Handwritten narrative only | You hit a jurisdiction with heavy handwritten content. Opt-in, slow, ~2 GB extra. |
+| PaddleOCR | Receipts, scene text | Don't. Catastrophic on noisy scans (≈3 % accuracy). Stays in the registry only for parity. |
+| EasyOCR | Scene/street photos | Don't. Strong on photos of street signs; mediocre on the documents you're actually feeding it. |
+
+If your inputs are clean digital PDFs with a real text layer, CARE skips OCR entirely and reads the native text — no engine choice needed.
+
 ## Documentation
 
 | Topic | Document |

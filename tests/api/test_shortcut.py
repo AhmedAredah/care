@@ -3,6 +3,13 @@
 These tests never touch the operator's real Desktop. We point each
 installer at a tmp_path-rooted "Desktop" and assert the artefacts
 that *would* land on a real install actually get written there.
+
+Some assertions are POSIX-only (chmod's executable bit is a no-op on
+NTFS — Python's ``os.chmod`` only honours the read-only flag on
+Windows). Those tests are guarded with ``skipif sys.platform == 'win32'``
+so they run on macOS / Linux CI but skip on a Windows dev machine
+running the full suite locally. The functions themselves are still
+callable on Windows; we just can't observe a meaningful x-bit there.
 """
 from __future__ import annotations
 
@@ -19,13 +26,25 @@ import pytest
 from care.cli import shortcut
 
 
+_WINDOWS_NO_XBIT = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="POSIX executable bit is a no-op on NTFS; the chmod call "
+    "still runs but Python's os.chmod can't set S_IXUSR.",
+)
+
+
 # ----- shared helpers --------------------------------------------------
 
 
 def test_build_command_args_includes_config_when_given() -> None:
-    args = shortcut._build_command_args(Path("/abs/config.yaml"))
+    config = Path("/abs/config.yaml")
+    args = shortcut._build_command_args(config)
     assert "-m" in args and "care.cli" in args and "app" in args
-    assert "--config" in args and "/abs/config.yaml" in args
+    # Compare against ``str(config)`` so the assertion is stable across
+    # platforms — on Windows ``str(WindowsPath("/abs/config.yaml"))``
+    # is ``"\\abs\\config.yaml"``, and the literal POSIX form would
+    # never appear in argv there.
+    assert "--config" in args and str(config) in args
 
 
 def test_build_command_args_omits_config_when_none() -> None:
@@ -71,6 +90,7 @@ def test_install_macos_creates_app_bundle_with_run_script(tmp_path: Path) -> Non
     assert "--config" in text
 
 
+@_WINDOWS_NO_XBIT
 def test_install_macos_run_script_is_executable(tmp_path: Path) -> None:
     bundle = shortcut.install_macos(desktop_dir=tmp_path)
     run_script = bundle / "Contents" / "MacOS" / "run"
@@ -126,6 +146,7 @@ def test_install_linux_writes_apps_and_desktop(monkeypatch, tmp_path: Path) -> N
     assert "--config" in text
 
 
+@_WINDOWS_NO_XBIT
 def test_install_linux_marks_files_executable(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "share"))
     apps_file, _ = shortcut.install_linux(desktop_dir=tmp_path)

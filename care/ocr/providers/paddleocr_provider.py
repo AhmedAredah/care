@@ -46,12 +46,7 @@ class PaddleOCRProvider(OCRProvider):
         self._engine: Any = None
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError(
-                "paddleocr.allow_network must be false"
-            )
-        if not config.get("local_files_only", True):
-            raise ConfigError("paddleocr.local_files_only must be true")
+        self.assert_offline_config(config)
 
         det = Path(config.get("det_model_dir") or "")
         rec = Path(config.get("rec_model_dir") or "")

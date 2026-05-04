@@ -5,7 +5,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from ..core.plugin_helpers import evaluate_model_files_present
+from ..core.plugin_helpers import (
+    assert_offline_config as _assert_offline_config,
+    evaluate_model_files_present,
+)
 from .result import OCRResult
 
 
@@ -43,6 +46,17 @@ class OCRProvider(ABC):
     # B = published numbers in-domain; C = vendor / unverified. The UI
     # only ranks providers within the same tier.
     accuracy_metrics: Optional[dict[str, Any]] = None
+
+    @classmethod
+    def assert_offline_config(cls, config: dict[str, Any]) -> None:
+        """Reject any config that opts the provider into network access.
+
+        Real OCR providers must call this as the first line of
+        :meth:`load` so misconfiguration fails closed before model
+        files are touched. The classmethod form picks up ``cls.name``
+        for the error message automatically.
+        """
+        _assert_offline_config(cls.name, config)
 
     @classmethod
     def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:

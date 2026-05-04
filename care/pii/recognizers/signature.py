@@ -8,21 +8,35 @@ from __future__ import annotations
 
 import re
 
-from ._base import Match
-
-ENTITY_TYPE = "SIGNATURE"
-DETECTION_REASON = "regex_signature_label"
-DEFAULT_CONFIDENCE = 0.6
-
-PATTERN = re.compile(
-    r"(?i:signature|signed\s+by)"
-    r"\s*[:\-]\s*"
-    r"([A-Z][a-zA-Z'\.\s]{2,40})"
-)
+from ._base import Match, RegexRecognizer
 
 
-def find(text: str) -> list[Match]:
-    return [
-        Match(m.group(1).rstrip(), m.start(1), m.start(1) + len(m.group(1).rstrip()), DEFAULT_CONFIDENCE)
-        for m in PATTERN.finditer(text)
-    ]
+class SignatureRecognizer(RegexRecognizer):
+    entity_type = "SIGNATURE"
+    detection_reason = "regex_signature_label"
+    default_confidence = 0.6
+    capture_group = 1
+    pattern = re.compile(
+        r"(?i:signature|signed\s+by)"
+        r"\s*[:\-]\s*"
+        r"([A-Z][a-zA-Z'\.\s]{2,40})"
+    )
+
+    @classmethod
+    def find(cls, text: str) -> list[Match]:
+        # The captured group can include trailing whitespace before the
+        # next sentence (the regex deliberately allows internal spaces
+        # to capture multi-word names like "J. Smith"); rstrip and
+        # contract the span to the trimmed length so the offsets stay
+        # accurate.
+        out: list[Match] = []
+        for m in cls.pattern.finditer(text):
+            captured = m.group(1)
+            trimmed = captured.rstrip()
+            start = m.start(1)
+            end = start + len(trimmed)
+            out.append(Match(trimmed, start, end, cls.default_confidence))
+        return out
+
+
+find = SignatureRecognizer.find

@@ -35,6 +35,9 @@ class PaddleOCRProvider(OCRProvider):
     supports_line_bboxes = True
     supports_confidence = True
 
+    MODEL_DIR_KEYS = ("det_model_dir", "rec_model_dir", "cls_model_dir")
+    WEIGHT_MARKERS = ("*.pdmodel", "*.pdiparams")
+
     def __init__(self) -> None:
         self._loaded = False
         self._det_dir: Optional[Path] = None
@@ -43,12 +46,7 @@ class PaddleOCRProvider(OCRProvider):
         self._engine: Any = None
 
     def load(self, config: dict[str, Any]) -> None:
-        if config.get("allow_network", False):
-            raise ConfigError(
-                "paddleocr.allow_network must be false"
-            )
-        if not config.get("local_files_only", True):
-            raise ConfigError("paddleocr.local_files_only must be true")
+        self.assert_offline_config(config)
 
         det = Path(config.get("det_model_dir") or "")
         rec = Path(config.get("rec_model_dir") or "")

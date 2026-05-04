@@ -4,6 +4,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+from ..core.plugin_helpers import (
+    assert_offline_config as _assert_offline_config,
+    evaluate_model_files_present,
+)
 from ..ocr.base import ProviderHealth
 from .entities import PIIEntity
 
@@ -20,9 +24,31 @@ class PIIDetectionProvider(ABC):
     supports_bboxes: bool = False
     supports_confidence: bool = False
 
+    # See OCRProvider.MODEL_DIR_KEYS / WEIGHT_MARKERS.
+    MODEL_DIR_KEYS: tuple[str, ...] = ()
+    WEIGHT_MARKERS: tuple[str, ...] = ()
+
     # See OCRProvider.accuracy_metrics for the schema. PII providers
     # typically populate ``per_entity`` with F1 per supported PII type.
     accuracy_metrics: Optional[dict[str, Any]] = None
+
+    @classmethod
+    def assert_offline_config(cls, config: dict[str, Any]) -> None:
+        """Reject any config that opts the provider into network access.
+
+        See ``OCRProvider.assert_offline_config`` — same contract on
+        the PII layer so every real provider's ``load()`` can call
+        ``self.assert_offline_config(config)`` as its first line.
+        """
+        _assert_offline_config(cls.name, config)
+
+    @classmethod
+    def model_files_present(cls, provider_cfg: dict[str, Any]) -> Optional[bool]:
+        return evaluate_model_files_present(
+            provider_cfg,
+            model_dir_keys=cls.MODEL_DIR_KEYS,
+            weight_markers=cls.WEIGHT_MARKERS,
+        )
 
     @abstractmethod
     def load(self, config: dict[str, Any]) -> None: ...

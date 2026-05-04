@@ -62,6 +62,37 @@ See [`docs/deployment-windows.md`](docs/deployment-windows.md) for the full depl
 
 > **Planned** — the `ml` SKU is being split into per-plugin bundles (one core installer + opt-in `pii-ml`, `vlm`, `ocr-traditional`, `presidio`, `llm-local`, `llm-cloud`). Each bundle ships its own model weights inline and is signed independently, so operators only download what they're licensed to deploy. License-review-required bundles (`pii-ml`, `vlm`) gate at install time. Tracking issue and migration notes will land before the cutover.
 
+### Pre-stage model weights (ML installs)
+
+The `ml-*` installers bundle the runtime to load Hugging Face models but never the weights themselves. Drop each model's checkpoint into its own subdirectory under the user-data tree before enabling the plugin in Settings:
+
+```
+%LOCALAPPDATA%\CARE\models\<group>\<provider>\
+```
+
+| Plugin | Source | License |
+|---|---|---|
+| `piiranha` (PII) | [`iiiorg/piiranha-v1-detect-personal-information`](https://huggingface.co/iiiorg/piiranha-v1-detect-personal-information) | CC BY-NC-ND 4.0 — license review required |
+| `roberta_ner` (PII) | [`Jean-Baptiste/roberta-large-ner-english`](https://huggingface.co/Jean-Baptiste/roberta-large-ner-english) | MIT |
+| `openai_privacy_filter` (PII) | [`openai/privacy-filter`](https://huggingface.co/openai/privacy-filter) | Apache-2.0 |
+| `kosmos25` (document-AI) | [`microsoft/kosmos-2.5`](https://huggingface.co/microsoft/kosmos-2.5) | see model card |
+| `layoutlm` (document-AI) | [`microsoft/layoutlm-base-uncased`](https://huggingface.co/microsoft/layoutlm-base-uncased) (v1) | MIT — v3 is CC BY-NC-SA 4.0 (non-commercial) |
+| `onnxtr` (OCR) | [OnnxTR GitHub releases](https://github.com/felixdittrich92/OnnxTR/releases) | Apache-2.0 |
+
+**Option A — `huggingface-cli` (connected host):**
+
+```powershell
+pip install -U "huggingface_hub[cli]"
+huggingface-cli download openai/privacy-filter `
+    --local-dir "$env:LOCALAPPDATA\CARE\models\pii\openai-privacy-filter"
+```
+
+Substitute the repo ID and `<group>\<provider>` subdirectory for each plugin you intend to enable. The per-provider `models/<group>/<provider>/README.md` files in this repo list the exact filenames and any `--include` filters that skip multi-GB extras you don't need.
+
+**Option B — Direct download:** open the model's Hugging Face **Files and versions** tab (or the OnnxTR GitHub release) and save every file listed in the per-provider README into the target subdirectory above. For air-gapped hosts, fetch on a connected workstation and copy the directory tree across, preserving layout.
+
+After staging, verify with `care model-manifest --models-dir "$env:LOCALAPPDATA\CARE\models"` — each provider you've populated should report `model_path_present: true`. Optionally pin integrity hashes with `care compute-model-checksums "$env:LOCALAPPDATA\CARE\models\<group>\<provider>"`. Read [`docs/license-and-model-governance.md`](docs/license-and-model-governance.md) **before** flipping any provider to `enabled: true`.
+
 ### Install (from source, any OS)
 
 ```bash

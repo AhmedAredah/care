@@ -136,6 +136,23 @@ pii:
       #   label_map:
       #     ORG: VEHICLE_OWNER_INFO    # redact org names too
       label_map: {}
+    # openai_privacy_filter — openai/privacy-filter (Apache-2.0).
+    # Bidirectional token-classification model trained for
+    # high-throughput PII detection. Eight labels: private_person,
+    # private_address, private_email, private_phone, private_date,
+    # private_url, account_number, secret. ~2.8 GB on disk; needs
+    # transformers >= 5.6 (ml extra). DISABLED by default.
+    openai_privacy_filter:
+      enabled: false
+      model_dir: ./models/pii/openai-privacy-filter
+      allow_network: false
+      local_files_only: true
+      min_confidence: 0.85
+      aggregation_strategy: simple
+      # Default drops private_url. To redact URLs too:
+      #   label_map:
+      #     private_url: CASE_NUMBER
+      label_map: {}
 
 llm:
   # Vendor-agnostic LLM/VLM plugin layer (Phase 12). DISABLED by

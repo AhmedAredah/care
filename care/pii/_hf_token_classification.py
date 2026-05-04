@@ -170,14 +170,16 @@ class HFTokenClassificationMixin:
 
     @staticmethod
     def _extract_label(span: dict[str, Any]) -> str:
-        """Return the bare label, stripping any ``B-`` / ``I-`` prefix.
+        """Return the bare label, stripping any BIO/BIOES prefix.
 
         HF pipelines vary on whether the prefix is included and on
         the field name (``entity`` vs ``entity_group``). We accept
-        either to stay resilient across transformers versions."""
+        either, and handle both the BIO scheme used by RoBERTa-NER /
+        Piiranha (``B-``/``I-``) and the BIOES scheme used by
+        privacy-filter (``B-``/``I-``/``E-``/``S-``)."""
         raw = span.get("entity_group") or span.get("entity") or ""
         raw = str(raw)
-        if raw[:2] in ("B-", "I-"):
+        if raw[:2] in ("B-", "I-", "E-", "S-"):
             return raw[2:]
         return raw
 

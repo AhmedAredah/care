@@ -24,7 +24,7 @@ CARE turns piles of police crash report PDFs into structured, **redacted** resea
 1. **Ingests** PDFs and scanned images, hashes every input, never modifies originals.
 2. **Detects** the report template (state-and-version specific YAML).
 3. **Extracts** the crash diagram (cropped image) and the officer's narrative (text + structured fields).
-4. **Redacts** every PII shape it finds — names, addresses, phones, VINs, plates, DOBs, license numbers, signatures, medical info. The default chain is `regex` only; operators add Presidio and ML providers (Piiranha, RoBERTa-NER) opt-in after license review.
+4. **Redacts** every PII shape it finds — names, addresses, phones, VINs, plates, DOBs, license numbers, signatures, medical info. The default chain is `regex` only; operators add Presidio and ML providers (Piiranha, RoBERTa-NER, OpenAI Privacy Filter) opt-in after license review.
 5. **Exports** only the safe artifacts (redacted diagram, redacted narrative, manifests, QA report). Originals never leave the working directory.
 
 If anything is unclear — unknown template, low OCR confidence, VLM output that doesn't agree with OCR, PII the redactor can't map back to image pixels — **the export is blocked** and the job is flagged for human review.
@@ -51,7 +51,7 @@ Download the installer for your environment from the [Releases page](https://git
 |---|---|
 | `CARE-*-core-online-Setup.exe` | **Default.** Slim install (~120 MB), connected workstation. |
 | `CARE-*-core-airgap-Setup.exe` | Slim install, air-gapped or restricted-network host. |
-| `CARE-*-ml-online-Setup.exe`   | Bundles `torch` + `transformers` so HF plugins (Piiranha, RoBERTa-NER, Kosmos-2.5, LayoutLM) can run. **Model weights are not included** — drop them into `%LOCALAPPDATA%\CARE\models\` per [`docs/license-and-model-governance.md`](docs/license-and-model-governance.md). |
+| `CARE-*-ml-online-Setup.exe`   | Bundles `torch` + `transformers` so HF plugins (Piiranha, RoBERTa-NER, OpenAI Privacy Filter, Kosmos-2.5, LayoutLM) can run. **Model weights are not included** — drop them into `%LOCALAPPDATA%\CARE\models\` per [`docs/license-and-model-governance.md`](docs/license-and-model-governance.md). |
 | `CARE-*-ml-airgap-Setup.exe`   | Same ML libraries, bundled WebView2 runtime for offline hosts. |
 | `CARE-*-core.msi`              | Enterprise SCCM/Intune deployment, slim. |
 | `CARE-*-ml.msi`                | Enterprise SCCM/Intune deployment, ML libraries. |

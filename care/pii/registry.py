@@ -37,6 +37,9 @@ def get_registry() -> PIIRegistry:
     if _registry is None:
         _registry = PIIRegistry()
         from .providers.mock_pii_provider import MockPIIProvider
+        from .providers.openai_privacy_filter_provider import (
+            OpenAIPrivacyFilterProvider,
+        )
         from .providers.optional_piiranha_provider import PiiranhaPIIProvider
         from .providers.presidio_provider import PresidioPIIProvider
         from .providers.regex_provider import RegexPIIProvider
@@ -44,16 +47,21 @@ def get_registry() -> PIIRegistry:
 
         _registry.register("mock_pii", MockPIIProvider)
         _registry.register("regex", RegexPIIProvider)
-        # Phase 5 skeletons — disabled by default. They only load when
-        # local model files are present (Presidio) or when the operator
-        # has accepted the license warning (Piiranha).
+        # Optional skeletons — disabled by default. They only load
+        # when local model files are present (Presidio) or when the
+        # operator has accepted the license warning (Piiranha).
         _registry.register("presidio", PresidioPIIProvider)
         _registry.register("piiranha", PiiranhaPIIProvider)
-        # Phase 12.3 — general English NER (Jean-Baptiste/
-        # roberta-large-ner-english). MIT-licensed, disabled by
-        # default. Supplements regex recognizers for free-text
-        # names and locations.
+        # General English NER (Jean-Baptiste/roberta-large-ner-english).
+        # MIT-licensed, disabled by default. Supplements regex
+        # recognizers for free-text names and locations.
         _registry.register("roberta_ner", RobertaNERProvider)
+        # OpenAI Privacy Filter (openai/privacy-filter). Apache-2.0,
+        # disabled by default. Bidirectional token-classification
+        # model trained for high-throughput PII detection.
+        _registry.register(
+            "openai_privacy_filter", OpenAIPrivacyFilterProvider
+        )
     return _registry
 
 

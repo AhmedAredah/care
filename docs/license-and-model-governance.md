@@ -6,9 +6,10 @@ it can be enabled in a deployment.
 
 ## Runtime dependency licenses
 
-`care` itself is released under the license at
-`LICENSE`. Every Python dependency declared in `pyproject.toml` is
-listed in the SBOM with its license string:
+`care` itself is released under the **Apache License, Version 2.0**
+(see `LICENSE` and `NOTICE` at the repo root). Every Python dependency
+declared in `pyproject.toml` is listed in the SBOM with its license
+string:
 
 ```
 care generate-sbom --output dist/sbom.json

@@ -38,11 +38,17 @@ def _iter_distributions() -> list[dict[str, Any]]:
         name = meta.get("Name") if hasattr(meta, "get") else None
         if not name:
             continue
+        # PEP 639 expression (License-Expression) takes precedence over
+        # the legacy free-text License field. Distributions that adopt
+        # SPDX expressions stop populating the legacy field, so falling
+        # back is required for accurate reporting.
+        license_expr = meta.get("License-Expression") if hasattr(meta, "get") else None
+        license_legacy = meta.get("License") if hasattr(meta, "get") else None
         out.append(
             {
                 "name": name,
                 "version": dist.version or "unknown",
-                "license": (meta.get("License") if hasattr(meta, "get") else None) or "UNKNOWN",
+                "license": license_expr or license_legacy or "UNKNOWN",
                 "homepage": (meta.get("Home-page") if hasattr(meta, "get") else None) or None,
                 "summary": (meta.get("Summary") if hasattr(meta, "get") else None) or None,
             }

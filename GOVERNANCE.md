@@ -145,7 +145,7 @@ Avoid AGPL libraries in the default runtime. If an AGPL library is useful, isola
 LICENSE AND MODEL GOVERNANCE
 ============================================================
 
-The repo itself should be suitable for open-source release. Use a permissive license such as Apache-2.0 or MIT unless the project owner later chooses otherwise.
+The repo itself is released under Apache-2.0 (see ``LICENSE`` and ``NOTICE``). The Apache-2.0 patent grant and NOTICE-propagation rules apply to all distributions, including the Windows installer artifacts.
 
 Every third-party dependency and model must be tracked in a license manifest.
 

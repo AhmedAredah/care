@@ -101,7 +101,8 @@ The short version:
 - Add tests that cover the offline path (skip cleanly if your model
   files aren't present in CI, but exercise the offline error path).
 - Update [`docs/license-and-model-governance.md`](docs/license-and-model-governance.md)
-  if your plugin pulls in a model with a non-MIT/Apache licence.
+  if your plugin pulls in a model with a non-permissive licence
+  (anything outside the MIT / BSD / Apache-2.0 family).
 
 ## Documentation contributions
 

@@ -6,7 +6,7 @@ Privacy-safe extraction of crash diagrams and narratives from police crash repor
 
 [![CI](https://github.com/AhmedAredah/care/actions/workflows/governance.yml/badge.svg)](https://github.com/AhmedAredah/care/actions/workflows/governance.yml)
 [![Windows tests](https://github.com/AhmedAredah/care/actions/workflows/windows-tests.yml/badge.svg)](https://github.com/AhmedAredah/care/actions/workflows/windows-tests.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Offline-first](https://img.shields.io/badge/offline-first-green.svg)](docs/offline-mode.md)
 [![Fail-closed](https://img.shields.io/badge/fail--closed-red.svg)](docs/security.md)
@@ -170,7 +170,7 @@ We welcome contributions. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workf
 
 ## License
 
-[MIT](LICENSE) — for the code we wrote. Optional models and dependencies carry their own licences; see [`docs/license-and-model-governance.md`](docs/license-and-model-governance.md) before enabling any of them.
+[Apache-2.0](LICENSE) — for the code we wrote. Optional models and dependencies carry their own licences; see [`docs/license-and-model-governance.md`](docs/license-and-model-governance.md) before enabling any of them.
 
 ---
 

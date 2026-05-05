@@ -1,0 +1,11 @@
+CARE — Crash Analysis & Redaction Engine
+Copyright 2026 Ahmed Aredah
+
+Licensed under the Apache License, Version 2.0 (the "License").
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes optional plugins and model weights distributed
+under their own licenses. See docs/license-and-model-governance.md
+for the per-plugin license matrix and review policy.

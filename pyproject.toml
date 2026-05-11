@@ -32,7 +32,7 @@ dependencies = [
     "fastapi>=0.136.1",
     "pillow>=12.2.0",
     "pydantic>=2.13.3",
-    "pypdfium2>=5.7.1",
+    "pypdfium2>=5.8.0",
     "pyyaml>=6.0.3",
     # ruamel.yaml is used by the GUI Settings save path so config.yaml
     # round-trips with comments and ordering preserved (Phase 13.3).
@@ -61,19 +61,19 @@ dependencies = [
 # Kept out of the base install so the runtime stays slim on
 # deployments that only use the offline-safe regex/Presidio chain.
 ml = [
-    # transformers>=5.6 is required for OpenAIPrivacyFilterForTokenClassification
+    # transformers>=5.8.0 is required for OpenAIPrivacyFilterForTokenClassification
     # (added in v5.6.0, 2026-04-22). Older HF token-classification
     # plugins (Piiranha, RoBERTa-NER, hf_local) work fine on the same
     # floor.
-    "transformers>=5.6",
+    "transformers>=5.8.0",
     "torch>=2.5",
 ]
 # Cloud LLM SDKs — opt-in only. Each is required only when the
 # matching cloud provider is enabled. None of these are reached at
 # runtime in offline mode (the offline guard rejects cloud providers
 # before any SDK call).
-llm-openai = ["openai>=1.55"]
-llm-anthropic = ["anthropic>=0.50"]
+llm-openai = ["openai>=2.36.0"]
+llm-anthropic = ["anthropic>=0.100.0"]
 # google-generativeai is upstream-deprecated in favor of google-genai.
 # The provider plugin imports either SDK (preferring google.genai) so
 # operators can migrate without code change. Floor stays on the
@@ -109,7 +109,7 @@ packages = ["care"]
 dev = [
     "fpdf2>=2.8.7",
     "pytest>=9.0.3",
-    "ruff>=0.9",
+    "ruff>=0.15.12",
 ]
 
 [tool.ruff]

@@ -72,7 +72,7 @@ ml = [
 # matching cloud provider is enabled. None of these are reached at
 # runtime in offline mode (the offline guard rejects cloud providers
 # before any SDK call).
-llm-openai = ["openai>=1.55"]
+llm-openai = ["openai>=2.36.0"]
 llm-anthropic = ["anthropic>=0.100.0"]
 # google-generativeai is upstream-deprecated in favor of google-genai.
 # The provider plugin imports either SDK (preferring google.genai) so
@@ -109,7 +109,7 @@ packages = ["care"]
 dev = [
     "fpdf2>=2.8.7",
     "pytest>=9.0.3",
-    "ruff>=0.9",
+    "ruff>=0.15.12",
 ]
 
 [tool.ruff]

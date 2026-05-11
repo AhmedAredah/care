@@ -109,7 +109,7 @@ packages = ["care"]
 dev = [
     "fpdf2>=2.8.7",
     "pytest>=9.0.3",
-    "ruff>=0.9",
+    "ruff>=0.15.12",
 ]
 
 [tool.ruff]

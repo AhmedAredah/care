@@ -32,7 +32,7 @@ dependencies = [
     "fastapi>=0.136.1",
     "pillow>=12.2.0",
     "pydantic>=2.13.3",
-    "pypdfium2>=5.7.1",
+    "pypdfium2>=5.8.0",
     "pyyaml>=6.0.3",
     # ruamel.yaml is used by the GUI Settings save path so config.yaml
     # round-trips with comments and ordering preserved (Phase 13.3).

@@ -73,7 +73,7 @@ ml = [
 # runtime in offline mode (the offline guard rejects cloud providers
 # before any SDK call).
 llm-openai = ["openai>=1.55"]
-llm-anthropic = ["anthropic>=0.50"]
+llm-anthropic = ["anthropic>=0.100.0"]
 # google-generativeai is upstream-deprecated in favor of google-genai.
 # The provider plugin imports either SDK (preferring google.genai) so
 # operators can migrate without code change. Floor stays on the

@@ -61,11 +61,11 @@ dependencies = [
 # Kept out of the base install so the runtime stays slim on
 # deployments that only use the offline-safe regex/Presidio chain.
 ml = [
-    # transformers>=5.8.0 is required for OpenAIPrivacyFilterForTokenClassification
+    # transformers>=5.8.1 is required for OpenAIPrivacyFilterForTokenClassification
     # (added in v5.6.0, 2026-04-22). Older HF token-classification
     # plugins (Piiranha, RoBERTa-NER, hf_local) work fine on the same
     # floor.
-    "transformers>=5.8.0",
+    "transformers>=5.8.1",
     "torch>=2.12.0",
 ]
 # Cloud LLM SDKs — opt-in only. Each is required only when the
